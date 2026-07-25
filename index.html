@@ -155,7 +155,7 @@
       <label class="lbl">반짝임 세기</label>
       <input type="range" id="twinkle" min="0" max="100" value="60">
       <div style="height:8px"></div>
-      <label class="lbl">뒤 후광 세기</label>
+      <label class="lbl">뒤 후광 반응 세기</label>
       <input type="range" id="backGlow" min="0" max="100" value="68">
       <div class="toggle-row">
         <span class="chip on" id="roundChip">모서리 둥글게</span>
@@ -310,7 +310,7 @@
     const ok = img && audio.src;
     els.playBtn.disabled = !ok;
     els.recBtn.disabled = !ok;
-    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 별은 줄지어 돌고, 뒤 후광은 음악에 맞춰 밝아졌다 돌아와요.');
+    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 별은 줄지어 돌고, 뒤 후광은 저음과 음량에 맞춰 크게 밝아졌다 돌아와요.');
   }
 
   // ---------- dominant color ----------
@@ -618,18 +618,34 @@
     const cardY = cy - cardH/2;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
 
-    // 이미지 뒤 후광: 음악 세기에 맞춰 커졌다가 다시 돌아오는 펄스형 글로우
+    // 이미지 뒤 후광: 이퀄라이저처럼 실제 음량/저음에 크게 반응
     const halo = Math.hypot(cardW,cardH)/2;
     const glowStrength = (Number(els.backGlow.value) || 0) / 100;
-    const glowPulse = 0.25 + smEnergy*0.9 + smBass*0.45;
-    const glowR = halo*(0.98 + glowStrength*0.18 + glowPulse*(0.22 + glowStrength*0.32));
-    const g = ctx.createRadialGradient(cx, cy, halo*0.18, cx, cy, glowR);
-    g.addColorStop(0, acc(0.30 + glowStrength*0.22 + smEnergy*0.18));
-    g.addColorStop(0.28, acc(0.16 + glowStrength*0.15 + glowPulse*0.08));
-    g.addColorStop(0.62, acc(0.06 + glowStrength*0.10 + glowPulse*0.06));
+
+    // analyser 값은 원래 변화폭이 작아서 비선형으로 증폭한다.
+    const energyReact = Math.min(1, Math.pow(smEnergy*4.2, 0.82));
+    const bassReact = Math.min(1, Math.pow(smBass*3.4, 0.78));
+    const midReact = Math.min(1, Math.pow(smMid*3.0, 0.88));
+    const glowPulse = Math.min(1, bassReact*0.72 + energyReact*0.52);
+
+    // 바깥 후광: 저음이 칠 때 반지름과 밝기가 확실하게 커졌다가 줄어든다.
+    const glowR = halo*(0.90 + glowStrength*0.10 + glowPulse*(0.48 + glowStrength*0.38));
+    const g = ctx.createRadialGradient(cx, cy, halo*0.20, cx, cy, glowR);
+    g.addColorStop(0, acc(0.10 + glowStrength*0.10 + energyReact*0.20));
+    g.addColorStop(0.32, acc(0.08 + glowStrength*0.16 + glowPulse*0.26));
+    g.addColorStop(0.68, acc(0.02 + glowStrength*0.08 + glowPulse*0.18));
     g.addColorStop(1, acc(0));
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.arc(cx,cy,glowR,0,Math.PI*2); ctx.fill();
+
+    // 중음 반응층: 이미지 가까이에서 한 번 더 숨 쉬듯 번진다.
+    const innerR = halo*(0.72 + midReact*0.24 + glowStrength*0.08);
+    const inner = ctx.createRadialGradient(cx,cy,halo*0.34,cx,cy,innerR);
+    inner.addColorStop(0, acc(0.10 + midReact*0.20));
+    inner.addColorStop(0.58, acc(0.04 + midReact*0.18));
+    inner.addColorStop(1, acc(0));
+    ctx.fillStyle=inner;
+    ctx.beginPath(); ctx.arc(cx,cy,innerR,0,Math.PI*2); ctx.fill();
 
     // 이미지 테두리를 따라 4꼭지 별 회전
     drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
@@ -647,8 +663,8 @@
       try{
         // rim glow
         ctx.save();
-        ctx.shadowColor = acc(0.85);
-        ctx.shadowBlur = 34 + (smBass*20 + smEnergy*34);
+        ctx.shadowColor = acc(0.28 + glowStrength*0.22 + glowPulse*0.50);
+        ctx.shadowBlur = 22 + glowStrength*28 + glowPulse*145;
         ctx.fillStyle='#000';
         roundRectPath(cardX,cardY,cardW,cardH,radius); ctx.fill();
         ctx.restore();
@@ -658,8 +674,8 @@
         // border stroke
         ctx.save();
         roundRectPath(cardX,cardY,cardW,cardH,radius);
-        ctx.strokeStyle = acc(0.52 + smEnergy*0.42);
-        ctx.lineWidth = 3 + smEnergy*3.2;
+        ctx.strokeStyle = acc(0.34 + glowStrength*0.18 + glowPulse*0.46);
+        ctx.lineWidth = 2.5 + glowPulse*5.5;
         ctx.stroke();
         ctx.restore();
       }catch(e){ ctx.restore(); }
