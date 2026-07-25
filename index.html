@@ -25,32 +25,28 @@
   header{width:min(100%,1120px);display:flex;align-items:baseline;gap:14px;margin:0 auto 16px;flex-wrap:wrap}
   header h1{font-size:21px;margin:0;letter-spacing:-.02em;font-weight:800}
   header .sub{font-size:12px;color:var(--ink-dim)}
-  .preview-layout{width:min(100%,1120px);display:grid;grid-template-columns:minmax(0,1fr) 220px;
-    gap:12px;align-items:start;margin:0 auto}
+  .preview-layout{width:min(100%,1120px);display:grid;grid-template-columns:minmax(0,1.75fr) minmax(320px,.95fr);
+    gap:12px;align-items:stretch;margin:0 auto}
   .stage-wrap{position:relative;width:100%;aspect-ratio:16/9;margin:0;border-radius:var(--radius);
     overflow:hidden;background:#000;box-shadow:0 18px 44px -22px rgba(20,20,40,.5),0 0 0 1px var(--panel-line);}
-  .preview-actions{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .preview-actions{display:flex;flex-direction:column;gap:12px;min-width:0;height:100%}
   .preview-actions h3{margin-bottom:0}
   .preview-actions .btns{display:flex;flex-direction:column;gap:8px;margin-top:0}
   .preview-actions button.act{width:100%;padding:12px 13px}
   .preview-actions select{width:100%;font-size:12px;padding:9px 8px}
   .preview-note{font-size:11px;color:var(--ink-dim);line-height:1.55}
-  .preview-actions .status{margin-top:0;padding-top:10px;border-top:1px solid var(--panel-line);line-height:1.55}
-  canvas#stage{width:100%;height:100%;display:block}
+  .preview-actions .status{margin-top:auto;padding-top:10px;border-top:1px solid var(--panel-line);line-height:1.55}
+  canvas#stage{width:100%;height:100%;display:block;touch-action:none}
   .empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:10px;color:var(--ink-dim);text-align:center;pointer-events:none;padding:20px}
   .empty-hint .big{font-size:16px;color:var(--ink)}
   .empty-hint.hide{display:none}
 
-  /* 4개 탭(카드) 동일 테마 배치 */
-  .controls{width:min(100%,1120px);display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    grid-template-areas:"source title" "equalizer background";
+  /* 왼쪽은 1·2·3 세로 묶음, 오른쪽은 4 이퀄라이저 단독 */
+  .controls{width:min(100%,1120px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;margin:16px auto 0;align-items:stretch}
-  .controls>.card:nth-child(1){grid-area:source}
-  .controls>.card:nth-child(2){grid-area:title}
-  .controls>.card:nth-child(3){grid-area:equalizer}
-  .controls>.card:nth-child(4){grid-area:background}
+  .control-column{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .equalizer-card{height:100%;min-width:0}
   .card{background:var(--panel);border:1px solid var(--panel-line);border-radius:var(--radius);padding:14px}
   .card h3{margin:0 0 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);font-weight:700}
 
@@ -60,8 +56,6 @@
   .drop b{color:var(--ink)}
   .filename{font-size:12px;color:#7b4fe0;font-weight:700;margin-top:8px;word-break:break-all}
   button.chip{font:inherit}
-  .eyedrop{cursor:pointer;font-size:11px;padding:6px 10px}
-
   .mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .mini-stack{display:flex;flex-direction:column;gap:6px}
   .range-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -103,11 +97,11 @@
   .foot{width:min(100%,1120px);margin:20px auto 0;font-size:12px;color:var(--ink-dim);line-height:1.7}
   .foot code{background:#eef0f4;padding:2px 6px;border-radius:5px;color:var(--accent)}
 
-  /* 노트북/고배율 화면: 이미지와 스포이드 버튼이 같은 화면에 남도록 더 압축 */
+  /* 노트북/고배율 화면에서도 주요 조작부가 한 화면에 남도록 압축 */
   @media(max-height:820px) and (min-width:901px){
     .wrap{padding-top:12px;padding-bottom:36px}
     header{margin-bottom:10px}
-    .preview-layout{width:min(100%,1000px);grid-template-columns:minmax(0,780px) 208px}
+    .preview-layout{width:min(100%,1000px);grid-template-columns:minmax(0,1.7fr) minmax(300px,.95fr)}
     .controls{margin-top:12px;gap:10px}
     .card{padding:12px}
     .drop{padding:12px}
@@ -119,10 +113,10 @@
     header{margin-bottom:14px}
     .preview-layout{grid-template-columns:1fr}
     .stage-wrap{width:100%}
-    .preview-actions{position:static}
+    .preview-actions{height:auto}
     .preview-actions .btns{display:grid;grid-template-columns:1fr 1fr}
     .preview-actions .rec,.preview-actions .ghost{grid-column:1/-1}
-    .controls{grid-template-columns:1fr;grid-template-areas:"source" "title" "equalizer" "background";gap:12px}
+    .controls{grid-template-columns:1fr;gap:12px}
     .mini-grid{grid-template-columns:1fr}
   }
 
@@ -169,56 +163,121 @@
   </div>
 
   <div class="controls">
-    <div class="card">
-      <h3>1 · 소스</h3>
-      <div class="drop" id="imgDrop">🖼️ <b>캐릭터 이미지</b> 클릭 또는 드래그<div class="filename" id="imgName"></div></div>
-      <div style="height:10px"></div>
-      <div class="drop" id="audioDrop">🎵 <b>노래 mp3</b> 클릭 또는 드래그<div class="filename" id="audioName"></div></div>
-      <input type="file" id="imgInput" accept="image/*" hidden>
-      <input type="file" id="audioInput" accept="audio/*" hidden>
-    </div>
-
-    <div class="card">
-      <h3>2 · 제목</h3>
-      <div class="field">
-        <label class="lbl">제목 / 캐릭터명 (선택)</label>
-        <input type="text" id="titleInput" lang="ko" inputmode="text" autocomplete="off" spellcheck="false" placeholder="예: 지견우 — 글로우 MV" maxlength="40">
+    <div class="control-column">
+      <div class="card">
+        <h3>1 · 소스</h3>
+        <div class="drop" id="imgDrop">🖼️ <b>캐릭터 이미지</b> 클릭 또는 드래그<div class="filename" id="imgName"></div></div>
+        <div style="height:10px"></div>
+        <div class="drop" id="audioDrop">🎵 <b>노래 mp3</b> 클릭 또는 드래그<div class="filename" id="audioName"></div></div>
+        <input type="file" id="imgInput" accept="image/*" hidden>
+        <input type="file" id="audioInput" accept="audio/*" hidden>
       </div>
-      <div style="height:12px"></div>
-      <div class="mini-grid">
-        <div class="mini-stack">
-          <label class="lbl">제목 색</label>
-          <div class="row">
-            <input type="color" id="titleColorInput" class="swatch" value="#ffffff">
+
+      <div class="card">
+        <h3>2 · 제목</h3>
+        <div class="field">
+          <label class="lbl">제목 / 캐릭터명 (선택)</label>
+          <input type="text" id="titleInput" lang="ko" inputmode="text" autocomplete="off" spellcheck="false" placeholder="예: 지견우 — 글로우 MV" maxlength="40">
+        </div>
+        <div style="height:12px"></div>
+        <div class="mini-grid">
+          <div class="mini-stack">
+            <label class="lbl">제목 색</label>
+            <div class="row">
+              <input type="color" id="titleColorInput" class="swatch" value="#ffffff">
+            </div>
+          </div>
+          <div class="field">
+            <label class="lbl">폰트</label>
+            <select id="titleFontSelect">
+              <option value="default">기본 고딕</option>
+              <option value="poster">굵은 포스터</option>
+              <option value="serif">명조체</option>
+              <option value="mono">모노</option>
+            </select>
           </div>
         </div>
+        <div style="height:12px"></div>
+        <div class="range-pair">
+          <div class="range-box">
+            <label class="lbl">폰트 크기</label>
+            <input type="range" id="titleSize" min="24" max="120" value="56">
+          </div>
+          <div class="range-box">
+            <label class="lbl">자간</label>
+            <input type="range" id="titleSpacing" min="-12" max="60" value="0">
+          </div>
+        </div>
+        <div style="height:10px"></div>
         <div class="field">
-          <label class="lbl">폰트</label>
-          <select id="titleFontSelect">
-            <option value="default">기본 고딕</option>
-            <option value="poster">굵은 포스터</option>
-            <option value="serif">명조체</option>
-            <option value="mono">모노</option>
-          </select>
+          <label class="lbl">제목 그림자</label>
+          <div class="toggle-row" style="margin-top:0">
+            <span class="chip on" id="titleShadowChip">그림자 사용</span>
+          </div>
         </div>
+        <div class="status" style="margin-top:9px">미리보기의 제목을 직접 드래그해 원하는 위치에 놓을 수 있어요.</div>
       </div>
-      <div style="height:12px"></div>
-      <div class="field">
-        <label class="lbl">제목 그림자</label>
-        <div class="toggle-row" style="margin-top:0">
-          <span class="chip on" id="titleShadowChip">그림자 사용</span>
+
+      <div class="card">
+        <h3>3 · 배경</h3>
+        <div class="toggle-row">
+          <span class="chip on" data-bg="solid">단색</span>
+          <span class="chip" data-bg="gradient">그라데이션</span>
+          <span class="chip" data-bg="image">이미지</span>
         </div>
+
+        <div class="bg-mode-panel" id="bgSolidPanel">
+          <div class="field" style="flex:0 0 auto">
+            <label class="lbl">배경색</label>
+            <div class="row">
+              <input type="color" id="bgColorInput" class="swatch" value="#0e0e14">
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-mode-panel" id="bgGradientPanel" hidden>
+          <div class="bg-color-grid">
+            <div class="field" style="flex:0 0 auto">
+              <label class="lbl">배경색</label>
+              <div class="row">
+                <input type="color" id="bgGradientColor1Input" class="swatch" value="#0e0e14">
+              </div>
+            </div>
+            <div class="field" style="flex:0 0 auto">
+              <label class="lbl">색 2</label>
+              <div class="row">
+                <input type="color" id="bgGradientColor2Input" class="swatch" value="#3a1d6e">
+              </div>
+            </div>
+            <div class="field" style="flex:0 0 150px">
+              <label class="lbl">방향</label>
+              <select id="bgDirSelect">
+                <option value="diagonal">↘ 대각</option>
+                <option value="horizontal">→ 가로</option>
+                <option value="vertical">↓ 세로</option>
+                <option value="radial">◎ 방사</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-mode-panel" id="bgImagePanel" hidden>
+          <div class="drop" id="bgImgDrop" style="padding:12px">🌄 <b>배경 이미지</b> 클릭/드래그<div class="filename" id="bgImgName"></div></div>
+          <div style="height:8px"></div>
+          <label class="lbl">배경 어둡게</label>
+          <input type="range" id="bgDim" min="0" max="90" value="35">
+        </div>
+        <input type="file" id="bgImgInput" accept="image/*" hidden>
       </div>
     </div>
 
-    <div class="card">
-      <h3>3 · 이퀄라이저</h3>
+    <div class="card equalizer-card">
+      <h3>4 · 이퀄라이저</h3>
       <div class="mini-stack">
         <label class="lbl">글로우 색</label>
         <div class="row">
           <input type="color" id="colorInput" class="swatch" value="#8a52ff">
           <label class="chip on" id="autoColorChip">이미지 자동추출</label>
-          <button type="button" class="chip eyedrop" data-pick="glow">💧 스포이드</button>
         </div>
       </div>
       <div style="height:10px"></div>
@@ -232,74 +291,19 @@
           <input type="range" id="intensity" min="0" max="100" value="55">
         </div>
       </div>
-      <div style="height:8px"></div>
+      <div style="height:12px"></div>
       <label class="lbl">회전 속도</label>
       <input type="range" id="float" min="0" max="100" value="45">
-      <div style="height:8px"></div>
+      <div style="height:12px"></div>
       <label class="lbl">반짝임 세기</label>
       <input type="range" id="twinkle" min="0" max="100" value="60">
-      <div style="height:8px"></div>
+      <div style="height:12px"></div>
       <label class="lbl">뒤 후광 반응 세기 (0=완전 끄기)</label>
       <input type="range" id="backGlow" min="0" max="100" value="68">
-      <div class="toggle-row">
+      <div class="toggle-row" style="margin-top:12px">
         <span class="chip on" id="roundChip">모서리 둥글게</span>
         <span class="chip on" id="particleChip">반짝 파편</span>
       </div>
-    </div>
-
-    <div class="card">
-      <h3>4 · 배경</h3>
-      <div class="toggle-row">
-        <span class="chip on" data-bg="solid">단색</span>
-        <span class="chip" data-bg="gradient">그라데이션</span>
-        <span class="chip" data-bg="image">이미지</span>
-      </div>
-
-      <div class="bg-mode-panel" id="bgSolidPanel">
-        <div class="field" style="flex:0 0 auto">
-          <label class="lbl">배경색</label>
-          <div class="row">
-            <input type="color" id="bgColorInput" class="swatch" value="#0e0e14">
-            <button type="button" class="chip eyedrop" data-pick="solid">💧 스포이드</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-mode-panel" id="bgGradientPanel" hidden>
-        <div class="bg-color-grid">
-          <div class="field" style="flex:0 0 auto">
-            <label class="lbl">배경색</label>
-            <div class="row">
-              <input type="color" id="bgGradientColor1Input" class="swatch" value="#0e0e14">
-              <button type="button" class="chip eyedrop" data-pick="grad1">💧</button>
-            </div>
-          </div>
-          <div class="field" style="flex:0 0 auto">
-            <label class="lbl">색 2</label>
-            <div class="row">
-              <input type="color" id="bgGradientColor2Input" class="swatch" value="#3a1d6e">
-              <button type="button" class="chip eyedrop" data-pick="grad2">💧</button>
-            </div>
-          </div>
-          <div class="field" style="flex:0 0 150px">
-            <label class="lbl">방향</label>
-            <select id="bgDirSelect">
-              <option value="diagonal">↘ 대각</option>
-              <option value="horizontal">→ 가로</option>
-              <option value="vertical">↓ 세로</option>
-              <option value="radial">◎ 방사</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-mode-panel" id="bgImagePanel" hidden>
-        <div class="drop" id="bgImgDrop" style="padding:12px">🌄 <b>배경 이미지</b> 클릭/드래그<div class="filename" id="bgImgName"></div></div>
-        <div style="height:8px"></div>
-        <label class="lbl">배경 어둡게</label>
-        <input type="range" id="bgDim" min="0" max="90" value="35">
-      </div>
-      <input type="file" id="bgImgInput" accept="image/*" hidden>
     </div>
   </div>
 
@@ -345,6 +349,12 @@
   let title = '';
   let titleColor = '#ffffff';
   let titleFont = 'default';
+  let titleFontSize = 56;       // 1080p 기준 픽셀 크기
+  let titleLetterSpacing = 0;   // 1080p 기준 자간
+  let titleX = 0.5, titleY = 0.88; // 해상도와 무관한 상대 좌표
+  let titleBounds = null;
+  let titleDragging = false;
+  let titleDragOffset = {x:0,y:0};
   let titleShadow = true;
   let titleComposing = false;
 
@@ -369,6 +379,8 @@
     titleInput: document.getElementById('titleInput'),
     titleColorInput: document.getElementById('titleColorInput'),
     titleFontSelect: document.getElementById('titleFontSelect'),
+    titleSize: document.getElementById('titleSize'),
+    titleSpacing: document.getElementById('titleSpacing'),
     titleShadowChip: document.getElementById('titleShadowChip'),
   };
 
@@ -469,6 +481,61 @@
     titleFont = e.target.value || 'default';
     if(!running) drawStatic();
   });
+  els.titleSize.addEventListener('input', e=>{
+    titleFontSize = Number(e.target.value) || 56;
+    if(!running) drawStatic();
+  });
+  els.titleSpacing.addEventListener('input', e=>{
+    titleLetterSpacing = Number(e.target.value) || 0;
+    if(!running) drawStatic();
+  });
+
+  function canvasPoint(e){
+    const rect=canvas.getBoundingClientRect();
+    return {
+      x:(e.clientX-rect.left)*(W/rect.width),
+      y:(e.clientY-rect.top)*(H/rect.height)
+    };
+  }
+  function pointInTitle(p){
+    return !!(title && titleBounds &&
+      p.x>=titleBounds.left-18 && p.x<=titleBounds.right+18 &&
+      p.y>=titleBounds.top-14 && p.y<=titleBounds.bottom+14);
+  }
+  canvas.addEventListener('pointerdown', e=>{
+    const p=canvasPoint(e);
+    if(!pointInTitle(p)) return;
+    titleDragging=true;
+    titleDragOffset.x=p.x-titleX*W;
+    titleDragOffset.y=p.y-titleY*H;
+    canvas.setPointerCapture?.(e.pointerId);
+    canvas.style.cursor='grabbing';
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e=>{
+    const p=canvasPoint(e);
+    if(!titleDragging){
+      canvas.style.cursor=pointInTitle(p)?'grab':'default';
+      return;
+    }
+    const halfW=titleBounds ? titleBounds.width/2 : 0;
+    const halfH=titleBounds ? titleBounds.height/2 : 0;
+    const nx=Math.max(halfW+12,Math.min(W-halfW-12,p.x-titleDragOffset.x));
+    const ny=Math.max(halfH+12,Math.min(H-halfH-12,p.y-titleDragOffset.y));
+    titleX=nx/W;
+    titleY=ny/H;
+    if(!running) drawStatic();
+    e.preventDefault();
+  });
+  function endTitleDrag(e){
+    if(!titleDragging) return;
+    titleDragging=false;
+    canvas.releasePointerCapture?.(e.pointerId);
+    canvas.style.cursor='grab';
+  }
+  canvas.addEventListener('pointerup', endTitleDrag);
+  canvas.addEventListener('pointercancel', endTitleDrag);
+  canvas.addEventListener('pointerleave', ()=>{ if(!titleDragging) canvas.style.cursor='default'; });
   els.titleShadowChip.addEventListener('click', function(){
     titleShadow = !titleShadow;
     this.classList.toggle('on', titleShadow);
@@ -502,28 +569,6 @@
   document.getElementById('bgDirSelect').addEventListener('change', e=>{ bgGradDir=e.target.value; if(!running) drawStatic(); });
   document.getElementById('bgDim').addEventListener('input', e=>{ bgDim=+e.target.value; if(!running) drawStatic(); });
 
-  // 스포이드 (EyeDropper API) — 화면(캐릭터 이미지 포함) 어디든 클릭해 그 픽셀 색을 추출
-  const eyedropSupported = ('EyeDropper' in window);
-  document.querySelectorAll('.eyedrop').forEach(btn=>{
-    if(!eyedropSupported){ btn.style.display='none'; return; }
-    btn.addEventListener('click', async ()=>{
-      try{
-        const res = await new window.EyeDropper().open();
-        const hex = res.sRGBHex;
-        const which = btn.dataset.pick;
-        const target = {
-          glow:'colorInput',
-          solid:'bgColorInput',
-          grad1:'bgGradientColor1Input',
-          grad2:'bgGradientColor2Input'
-        }[which];
-        const inp = target ? document.getElementById(target) : null;
-        if(!inp) return;
-        inp.value = hex;
-        inp.dispatchEvent(new Event('input'));   // 기존 핸들러 재사용
-      }catch(e){ /* 사용자가 취소 */ }
-    });
-  });
   // background image upload (separate from character)
   const bgImgInput = document.getElementById('bgImgInput');
   const bgImgDrop = document.getElementById('bgImgDrop');
@@ -586,6 +631,27 @@
       case 'mono': return '"D2Coding","Consolas","Malgun Gothic",monospace';
       default: return '"Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif';
     }
+  }
+
+  function measureSpacedText(text, spacing){
+    const chars=Array.from(text);
+    let width=0;
+    for(let i=0;i<chars.length;i++) width+=ctx.measureText(chars[i]).width;
+    if(chars.length>1) width+=spacing*(chars.length-1);
+    return width;
+  }
+
+  function fillSpacedText(text, centerX, y, spacing){
+    const chars=Array.from(text);
+    const widths=chars.map(ch=>ctx.measureText(ch).width);
+    const total=widths.reduce((sum,v)=>sum+v,0)+Math.max(0,chars.length-1)*spacing;
+    let x=centerX-total/2;
+    ctx.textAlign='left';
+    for(let i=0;i<chars.length;i++){
+      ctx.fillText(chars[i],x,y);
+      x+=widths[i]+spacing;
+    }
+    return total;
   }
 
   function freqToBin(freq){
@@ -929,22 +995,37 @@
     });
     sparkles=sparkles.filter(s=>s.life>0);
 
-    // title
+    // title — 미리보기에서 직접 드래그하며 크기와 자간도 조정 가능
     if(title){
       ctx.save();
-      ctx.textAlign='center';
-      ctx.font = `800 ${Math.round(H*0.052)}px ${getTitleFontStack(titleFont)}`;
-      const ty = H*0.88;
+      const scale=H/1080;
+      const fontPx=Math.max(12,titleFontSize*scale);
+      const spacing=titleLetterSpacing*scale;
+      const tx=titleX*W, ty=titleY*H;
+      ctx.font = `800 ${fontPx}px ${getTitleFontStack(titleFont)}`;
+      ctx.textBaseline='middle';
       if(titleShadow){
         ctx.shadowColor='rgba(0,0,0,0.8)';
-        ctx.shadowBlur=18;
+        ctx.shadowBlur=18*scale;
       }else{
         ctx.shadowColor='rgba(0,0,0,0)';
         ctx.shadowBlur=0;
       }
       ctx.fillStyle=titleColor;
-      ctx.fillText(title, cx, ty);
+      const measuredWidth=measureSpacedText(title,spacing);
+      fillSpacedText(title,tx,ty,spacing);
+      const measuredHeight=fontPx*1.18;
+      titleBounds={
+        left:tx-measuredWidth/2,
+        right:tx+measuredWidth/2,
+        top:ty-measuredHeight/2,
+        bottom:ty+measuredHeight/2,
+        width:measuredWidth,
+        height:measuredHeight
+      };
       ctx.restore();
+    }else{
+      titleBounds=null;
     }
   }
 
