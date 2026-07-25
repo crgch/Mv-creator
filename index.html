@@ -206,6 +206,18 @@
   </div>
 
   <div class="card" style="margin-top:14px">
+    <div class="row" style="margin-bottom:10px">
+      <div class="field" style="flex:0 1 290px">
+        <label class="lbl">녹화 화질</label>
+        <select id="recordQuality">
+          <option value="1080">1080p 고화질 · 30fps · 20Mbps</option>
+          <option value="1440" selected>1440p 최고화질 · 30fps · 32Mbps</option>
+          <option value="1080_60">1080p 부드럽게 · 60fps · 30Mbps</option>
+          <option value="2160">4K 초고화질 · 30fps · 55Mbps</option>
+        </select>
+      </div>
+      <div class="status" style="margin:18px 0 0">원본 이미지가 작으면 해상도를 올려도 선명도가 제한될 수 있어요.</div>
+    </div>
     <div class="btns">
       <button class="act play" id="playBtn" disabled>▶ 재생</button>
       <button class="act rec" id="recBtn" disabled>● 영상 녹화 &amp; 다운로드</button>
@@ -215,7 +227,7 @@
   </div>
 
   <div class="foot">
-    <b>녹화 안내</b> — 녹화는 실시간(노래 길이만큼)으로 진행돼요. 녹화 버튼을 누르면 노래가 처음부터 재생되며, 끝나면 자동으로 <code>.webm</code> 파일이 다운로드돼요. 유튜브는 webm 업로드를 그대로 지원해요. mp4가 꼭 필요하면 다운로드한 webm을 변환기(예: CloudConvert)에 넣으면 돼요.
+    <b>녹화 안내</b> — 녹화는 실시간(노래 길이만큼)으로 진행돼요. 녹화 버튼을 누르면 노래가 처음부터 재생되며, 끝나면 자동으로 <code>.webm</code> 파일이 다운로드돼요. 유튜브는 webm 업로드를 그대로 지원해요. 1440p·4K는 파일이 크고 기기 성능을 더 사용해요. mp4가 꼭 필요하면 다운로드한 webm을 변환기(예: CloudConvert)에 넣으면 돼요.
   </div>
 </div>
 
@@ -224,8 +236,10 @@
 <script>
 (function(){
   const canvas = document.getElementById('stage');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d', {alpha:false});
+  let W = canvas.width, H = canvas.height;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   const audio = document.getElementById('audio');
   const hint = document.getElementById('hint');
   const statusEl = document.getElementById('status');
@@ -262,6 +276,7 @@
     playBtn: document.getElementById('playBtn'),
     recBtn: document.getElementById('recBtn'),
     stopRecBtn: document.getElementById('stopRecBtn'),
+    recordQuality: document.getElementById('recordQuality'),
     colorInput: document.getElementById('colorInput'),
     autoColorChip: document.getElementById('autoColorChip'),
     starCount: document.getElementById('starCount'),
@@ -824,12 +839,43 @@
   });
 
   // ---------- record ----------
+  const RECORD_PRESETS = {
+    '1080':    {width:1920,height:1080,fps:30,videoBits:20000000,audioBits:256000,label:'1080p 고화질'},
+    '1440':    {width:2560,height:1440,fps:30,videoBits:32000000,audioBits:320000,label:'1440p 최고화질'},
+    '1080_60': {width:1920,height:1080,fps:60,videoBits:30000000,audioBits:320000,label:'1080p 60fps'},
+    '2160':    {width:3840,height:2160,fps:30,videoBits:55000000,audioBits:320000,label:'4K 초고화질'}
+  };
+
+  function getRecordPreset(){
+    return RECORD_PRESETS[els.recordQuality.value] || RECORD_PRESETS['1440'];
+  }
+
+  function applyCanvasResolution(preset){
+    if(canvas.width===preset.width && canvas.height===preset.height) return;
+    canvas.width=preset.width;
+    canvas.height=preset.height;
+    W=canvas.width;
+    H=canvas.height;
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    if(!running) drawStatic();
+  }
+
+  els.recordQuality.addEventListener('change', ()=>{
+    const preset=getRecordPreset();
+    applyCanvasResolution(preset);
+    setStatus(`<b>${preset.label}</b>로 녹화해요. 예상 화질은 좋아지지만 파일 용량도 커져요.`);
+  });
+
   let recorder, chunks=[];
   els.recBtn.addEventListener('click', async ()=>{
     initAudio();
     if(audioCtx.state==='suspended') await audioCtx.resume();
 
-    const canvasStream = canvas.captureStream(30);
+    const preset=getRecordPreset();
+    applyCanvasResolution(preset);
+
+    const canvasStream = canvas.captureStream(preset.fps);
     const combined = new MediaStream([
       ...canvasStream.getVideoTracks(),
       ...streamDest.stream.getAudioTracks()
@@ -837,8 +883,13 @@
     let mime = '';
     ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
       .some(m=>{ if(MediaRecorder.isTypeSupported(m)){ mime=m; return true; } });
-    try{ recorder = new MediaRecorder(combined, mime?{mimeType:mime,videoBitsPerSecond:8000000}:undefined); }
-    catch(e){ setStatus('이 브라우저는 녹화를 지원하지 않아요. Chrome을 권장해요.'); return; }
+    const recorderOptions = {
+      videoBitsPerSecond:preset.videoBits,
+      audioBitsPerSecond:preset.audioBits
+    };
+    if(mime) recorderOptions.mimeType=mime;
+    try{ recorder = new MediaRecorder(combined, recorderOptions); }
+    catch(e){ setStatus('이 브라우저는 선택한 고화질 녹화를 지원하지 않아요. Chrome에서 1080p로 다시 시도해 주세요.'); return; }
 
     chunks=[];
     recorder.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
@@ -852,17 +903,19 @@
       els.recBtn.classList.remove('recording');
       els.recBtn.style.display=''; els.stopRecBtn.style.display='none';
       els.playBtn.disabled=false;
+      els.recordQuality.disabled=false;
     };
 
     // 처음부터 재생하며 녹화
     audio.currentTime = 0;
     await audio.play();
     running = true; loop();
-    recorder.start();
+    recorder.start(1000);
     els.recBtn.classList.add('recording');
     els.recBtn.style.display='none'; els.stopRecBtn.style.display='';
     els.playBtn.disabled=true;
-    setStatus('🔴 녹화 중… 노래가 끝나면 자동으로 저장돼요. (탭을 계속 열어두세요)');
+    els.recordQuality.disabled=true;
+    setStatus(`🔴 ${preset.label} · ${preset.fps}fps · 약 ${Math.round(preset.videoBits/1000000)}Mbps로 녹화 중… 노래가 끝나면 자동 저장돼요.`);
 
     audio.addEventListener('ended', ()=>{
       if(recorder && recorder.state!=='inactive') recorder.stop();
@@ -880,6 +933,7 @@
 
   // initial
   setAccentVar();
+  applyCanvasResolution(getRecordPreset());
   drawStatic();
 })();
 </script>
