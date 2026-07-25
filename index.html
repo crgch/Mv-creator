@@ -25,22 +25,32 @@
   header{width:min(100%,1120px);display:flex;align-items:baseline;gap:14px;margin:0 auto 16px;flex-wrap:wrap}
   header h1{font-size:21px;margin:0;letter-spacing:-.02em;font-weight:800}
   header .sub{font-size:12px;color:var(--ink-dim)}
-  .stage-wrap{position:relative;width:min(100%,900px);aspect-ratio:16/9;margin:0 auto;border-radius:var(--radius);
+  .preview-layout{width:min(100%,1120px);display:grid;grid-template-columns:minmax(0,1fr) 220px;
+    gap:12px;align-items:start;margin:0 auto}
+  .stage-wrap{position:relative;width:100%;aspect-ratio:16/9;margin:0;border-radius:var(--radius);
     overflow:hidden;background:#000;box-shadow:0 18px 44px -22px rgba(20,20,40,.5),0 0 0 1px var(--panel-line);}
+  .preview-actions{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .preview-actions h3{margin-bottom:0}
+  .preview-actions .btns{display:flex;flex-direction:column;gap:8px;margin-top:0}
+  .preview-actions button.act{width:100%;padding:12px 13px}
+  .preview-actions select{width:100%;font-size:12px;padding:9px 8px}
+  .preview-note{font-size:11px;color:var(--ink-dim);line-height:1.55}
+  .preview-actions .status{margin-top:0;padding-top:10px;border-top:1px solid var(--panel-line);line-height:1.55}
   canvas#stage{width:100%;height:100%;display:block}
   .empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:10px;color:var(--ink-dim);text-align:center;pointer-events:none;padding:20px}
   .empty-hint .big{font-size:16px;color:var(--ink)}
   .empty-hint.hide{display:none}
 
-  /* 소스·배경은 왼쪽에 쌓고, 스타일은 오른쪽에서 두 줄 높이로 확장 */
+  /* 4개 탭(카드) 동일 테마 배치 */
   .controls{width:min(100%,1120px);display:grid;
-    grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);
-    grid-template-areas:"source style" "background style";
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-areas:"source title" "equalizer background";
     gap:12px;margin:16px auto 0;align-items:stretch}
   .controls>.card:nth-child(1){grid-area:source}
-  .controls>.card:nth-child(2){grid-area:style}
-  .controls>.card:nth-child(3){grid-area:background}
+  .controls>.card:nth-child(2){grid-area:title}
+  .controls>.card:nth-child(3){grid-area:equalizer}
+  .controls>.card:nth-child(4){grid-area:background}
   .card{background:var(--panel);border:1px solid var(--panel-line);border-radius:var(--radius);padding:14px}
   .card h3{margin:0 0 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);font-weight:700}
 
@@ -50,7 +60,16 @@
   .drop b{color:var(--ink)}
   .filename{font-size:12px;color:#7b4fe0;font-weight:700;margin-top:8px;word-break:break-all}
   button.chip{font:inherit}
-  .eyedrop{cursor:pointer}
+  .eyedrop{cursor:pointer;font-size:11px;padding:6px 10px}
+
+  .mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .mini-stack{display:flex;flex-direction:column;gap:6px}
+  .range-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .range-box{min-width:0;padding:9px 10px 7px;border:1px solid var(--panel-line);
+    border-radius:10px;background:#fafafd}
+  .range-box input[type=range]{display:block;margin-top:2px}
+  .bg-mode-panel{margin-top:12px}
+  .bg-color-grid{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
 
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
@@ -88,7 +107,7 @@
   @media(max-height:820px) and (min-width:901px){
     .wrap{padding-top:12px;padding-bottom:36px}
     header{margin-bottom:10px}
-    .stage-wrap{width:min(100%,780px)}
+    .preview-layout{width:min(100%,1000px);grid-template-columns:minmax(0,780px) 208px}
     .controls{margin-top:12px;gap:10px}
     .card{padding:12px}
     .drop{padding:12px}
@@ -98,8 +117,17 @@
   @media(max-width:900px){
     .wrap{padding:16px 16px 42px}
     header{margin-bottom:14px}
+    .preview-layout{grid-template-columns:1fr}
     .stage-wrap{width:100%}
-    .controls{grid-template-columns:1fr;grid-template-areas:"source" "style" "background";gap:12px}
+    .preview-actions{position:static}
+    .preview-actions .btns{display:grid;grid-template-columns:1fr 1fr}
+    .preview-actions .rec,.preview-actions .ghost{grid-column:1/-1}
+    .controls{grid-template-columns:1fr;grid-template-areas:"source" "title" "equalizer" "background";gap:12px}
+    .mini-grid{grid-template-columns:1fr}
+  }
+
+  @media(max-width:560px){
+    .range-pair{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -110,12 +138,34 @@
     <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 별 궤도 & 후광 비주얼</span>
   </header>
 
-  <div class="stage-wrap">
-    <canvas id="stage" width="1920" height="1080"></canvas>
-    <div class="empty-hint" id="hint">
-      <div class="big">캐릭터 이미지와 노래를 넣어주세요</div>
-      <div>이미지 뒤 후광이 음악에 맞춰 밝아졌다 돌아오고, 별은 궤도를 따라 줄지어 회전해요</div>
+  <div class="preview-layout">
+    <div class="stage-wrap">
+      <canvas id="stage" width="1920" height="1080"></canvas>
+      <div class="empty-hint" id="hint">
+        <div class="big">캐릭터 이미지와 노래를 넣어주세요</div>
+        <div>이미지 뒤 후광이 음악에 맞춰 밝아졌다 돌아오고, 별은 궤도를 따라 줄지어 회전해요</div>
+      </div>
     </div>
+
+    <aside class="card preview-actions">
+      <h3>재생 · 녹화</h3>
+      <div class="btns">
+        <button class="act play" id="playBtn" disabled>▶ 재생</button>
+        <button class="act rec" id="recBtn" disabled>● 영상 녹화 &amp; 다운로드</button>
+        <button class="act ghost" id="stopRecBtn" style="display:none">■ 녹화 종료</button>
+      </div>
+      <div class="field">
+        <label class="lbl">녹화 화질</label>
+        <select id="recordQuality">
+          <option value="1080">1080p 고화질 · 30fps · 20Mbps</option>
+          <option value="1440" selected>1440p 최고화질 · 30fps · 32Mbps</option>
+          <option value="1080_60">1080p 부드럽게 · 60fps · 30Mbps</option>
+          <option value="2160">4K 초고화질 · 30fps · 55Mbps</option>
+        </select>
+      </div>
+      <div class="preview-note">원본 이미지가 작으면 해상도를 올려도 선명도가 제한될 수 있어요.</div>
+      <div class="status" id="status">이미지와 mp3를 넣으면 재생 버튼이 켜져요.</div>
+    </aside>
   </div>
 
   <div class="controls">
@@ -129,30 +179,59 @@
     </div>
 
     <div class="card">
-      <h3>2 · 스타일</h3>
+      <h3>2 · 제목</h3>
       <div class="field">
         <label class="lbl">제목 / 캐릭터명 (선택)</label>
         <input type="text" id="titleInput" lang="ko" inputmode="text" autocomplete="off" spellcheck="false" placeholder="예: 지견우 — 글로우 MV" maxlength="40">
       </div>
-      <div style="height:10px"></div>
-      <label class="lbl">제목 색</label>
-      <div class="row" style="margin-top:6px">
-        <input type="color" id="titleColorInput" class="swatch" value="#ffffff">
+      <div style="height:12px"></div>
+      <div class="mini-grid">
+        <div class="mini-stack">
+          <label class="lbl">제목 색</label>
+          <div class="row">
+            <input type="color" id="titleColorInput" class="swatch" value="#ffffff">
+          </div>
+        </div>
+        <div class="field">
+          <label class="lbl">폰트</label>
+          <select id="titleFontSelect">
+            <option value="default">기본 고딕</option>
+            <option value="poster">굵은 포스터</option>
+            <option value="serif">명조체</option>
+            <option value="mono">모노</option>
+          </select>
+        </div>
       </div>
       <div style="height:12px"></div>
-      <label class="lbl">글로우 색</label>
-      <div class="row" style="margin-top:6px">
-        <input type="color" id="colorInput" class="swatch" value="#8a52ff">
-        <label class="chip on" id="autoColorChip">이미지 자동추출</label>
-        <button type="button" class="chip eyedrop" data-pick="glow">💧 스포이드</button>
+      <div class="field">
+        <label class="lbl">제목 그림자</label>
+        <div class="toggle-row" style="margin-top:0">
+          <span class="chip on" id="titleShadowChip">그림자 사용</span>
+        </div>
       </div>
+    </div>
 
-      <div style="height:14px"></div>
-      <label class="lbl">별 개수</label>
-      <input type="range" id="starCount" min="0" max="16" value="7">
-      <div style="height:8px"></div>
-      <label class="lbl">별 크기</label>
-      <input type="range" id="intensity" min="0" max="100" value="55">
+    <div class="card">
+      <h3>3 · 이퀄라이저</h3>
+      <div class="mini-stack">
+        <label class="lbl">글로우 색</label>
+        <div class="row">
+          <input type="color" id="colorInput" class="swatch" value="#8a52ff">
+          <label class="chip on" id="autoColorChip">이미지 자동추출</label>
+          <button type="button" class="chip eyedrop" data-pick="glow">💧 스포이드</button>
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="range-pair">
+        <div class="range-box">
+          <label class="lbl">별 개수</label>
+          <input type="range" id="starCount" min="0" max="16" value="7">
+        </div>
+        <div class="range-box">
+          <label class="lbl">별 크기</label>
+          <input type="range" id="intensity" min="0" max="100" value="55">
+        </div>
+      </div>
       <div style="height:8px"></div>
       <label class="lbl">회전 속도</label>
       <input type="range" id="float" min="0" max="100" value="45">
@@ -169,38 +248,52 @@
     </div>
 
     <div class="card">
-      <h3>3 · 배경</h3>
+      <h3>4 · 배경</h3>
       <div class="toggle-row">
         <span class="chip on" data-bg="solid">단색</span>
         <span class="chip" data-bg="gradient">그라데이션</span>
         <span class="chip" data-bg="image">이미지</span>
       </div>
-      <div class="row" style="margin-top:12px">
+
+      <div class="bg-mode-panel" id="bgSolidPanel">
         <div class="field" style="flex:0 0 auto">
-          <label class="lbl" id="bgColorLbl">배경색</label>
+          <label class="lbl">배경색</label>
           <div class="row">
             <input type="color" id="bgColorInput" class="swatch" value="#0e0e14">
-            <button type="button" class="chip eyedrop" data-pick="bg1">💧</button>
+            <button type="button" class="chip eyedrop" data-pick="solid">💧 스포이드</button>
           </div>
-        </div>
-        <div class="field" style="flex:0 0 auto" id="bgColor2Wrap" hidden>
-          <label class="lbl">색 2</label>
-          <div class="row">
-            <input type="color" id="bgColor2Input" class="swatch" value="#3a1d6e">
-            <button type="button" class="chip eyedrop" data-pick="bg2">💧</button>
-          </div>
-        </div>
-        <div class="field" style="flex:0 0 auto" id="bgDirWrap" hidden>
-          <label class="lbl">방향</label>
-          <select id="bgDirSelect">
-            <option value="diagonal">↘ 대각</option>
-            <option value="horizontal">→ 가로</option>
-            <option value="vertical">↓ 세로</option>
-            <option value="radial">◎ 방사</option>
-          </select>
         </div>
       </div>
-      <div id="bgImageWrap" hidden style="margin-top:12px">
+
+      <div class="bg-mode-panel" id="bgGradientPanel" hidden>
+        <div class="bg-color-grid">
+          <div class="field" style="flex:0 0 auto">
+            <label class="lbl">배경색</label>
+            <div class="row">
+              <input type="color" id="bgGradientColor1Input" class="swatch" value="#0e0e14">
+              <button type="button" class="chip eyedrop" data-pick="grad1">💧</button>
+            </div>
+          </div>
+          <div class="field" style="flex:0 0 auto">
+            <label class="lbl">색 2</label>
+            <div class="row">
+              <input type="color" id="bgGradientColor2Input" class="swatch" value="#3a1d6e">
+              <button type="button" class="chip eyedrop" data-pick="grad2">💧</button>
+            </div>
+          </div>
+          <div class="field" style="flex:0 0 150px">
+            <label class="lbl">방향</label>
+            <select id="bgDirSelect">
+              <option value="diagonal">↘ 대각</option>
+              <option value="horizontal">→ 가로</option>
+              <option value="vertical">↓ 세로</option>
+              <option value="radial">◎ 방사</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-mode-panel" id="bgImagePanel" hidden>
         <div class="drop" id="bgImgDrop" style="padding:12px">🌄 <b>배경 이미지</b> 클릭/드래그<div class="filename" id="bgImgName"></div></div>
         <div style="height:8px"></div>
         <label class="lbl">배경 어둡게</label>
@@ -208,27 +301,6 @@
       </div>
       <input type="file" id="bgImgInput" accept="image/*" hidden>
     </div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <div class="row" style="margin-bottom:10px">
-      <div class="field" style="flex:0 1 290px">
-        <label class="lbl">녹화 화질</label>
-        <select id="recordQuality">
-          <option value="1080">1080p 고화질 · 30fps · 20Mbps</option>
-          <option value="1440" selected>1440p 최고화질 · 30fps · 32Mbps</option>
-          <option value="1080_60">1080p 부드럽게 · 60fps · 30Mbps</option>
-          <option value="2160">4K 초고화질 · 30fps · 55Mbps</option>
-        </select>
-      </div>
-      <div class="status" style="margin:18px 0 0">원본 이미지가 작으면 해상도를 올려도 선명도가 제한될 수 있어요.</div>
-    </div>
-    <div class="btns">
-      <button class="act play" id="playBtn" disabled>▶ 재생</button>
-      <button class="act rec" id="recBtn" disabled>● 영상 녹화 &amp; 다운로드</button>
-      <button class="act ghost" id="stopRecBtn" style="display:none">■ 녹화 종료</button>
-    </div>
-    <div class="status" id="status">이미지와 mp3를 넣으면 재생 버튼이 켜져요.</div>
   </div>
 
   <div class="foot">
@@ -259,9 +331,10 @@
   let rounded = true;
   let particles = true;
   let bgType = 'solid';          // solid | gradient | image
-  let bgColor = '#0e0e14';
-  let bgColor2 = '#3a1d6e';
-  let bgGradDir = 'diagonal';    // diagonal | vertical | radial
+  let bgSolidColor = '#0e0e14';
+  let bgGradientColor1 = '#0e0e14';
+  let bgGradientColor2 = '#3a1d6e';
+  let bgGradDir = 'diagonal';    // diagonal | horizontal | vertical | radial
   let bgImage = null;
   let bgDim = 35;
   let smBass = 0, smMid = 0, smEnergy = 0; // smoothed values
@@ -271,6 +344,8 @@
   let sparkles = [];
   let title = '';
   let titleColor = '#ffffff';
+  let titleFont = 'default';
+  let titleShadow = true;
   let titleComposing = false;
 
   const els = {
@@ -293,6 +368,8 @@
     backGlow: document.getElementById('backGlow'),
     titleInput: document.getElementById('titleInput'),
     titleColorInput: document.getElementById('titleColorInput'),
+    titleFontSelect: document.getElementById('titleFontSelect'),
+    titleShadowChip: document.getElementById('titleShadowChip'),
   };
 
   function setStatus(html){ statusEl.innerHTML = html; }
@@ -388,20 +465,28 @@
     titleColor=e.target.value || '#ffffff';
     if(!running) drawStatic();
   });
+  els.titleFontSelect.addEventListener('change', e=>{
+    titleFont = e.target.value || 'default';
+    if(!running) drawStatic();
+  });
+  els.titleShadowChip.addEventListener('click', function(){
+    titleShadow = !titleShadow;
+    this.classList.toggle('on', titleShadow);
+    this.textContent = titleShadow ? '그림자 사용' : '그림자 없음';
+    if(!running) drawStatic();
+  });
   els.twinkle.addEventListener('input', ()=>{ if(!running) drawStatic(); });
   els.starCount.addEventListener('input', ()=>{ if(!running) drawStatic(); });
   els.backGlow.addEventListener('input', ()=>{ if(!running) drawStatic(); });
 
-  // background controls
-  const bgColor2Wrap = document.getElementById('bgColor2Wrap');
-  const bgDirWrap = document.getElementById('bgDirWrap');
-  const bgImageWrap = document.getElementById('bgImageWrap');
-  const bgColorLbl = document.getElementById('bgColorLbl');
+  // background controls — 세 모드를 완전히 분리해 선택한 모드의 옵션만 보인다.
+  const bgSolidPanel = document.getElementById('bgSolidPanel');
+  const bgGradientPanel = document.getElementById('bgGradientPanel');
+  const bgImagePanel = document.getElementById('bgImagePanel');
   function refreshBgUI(){
-    bgColor2Wrap.hidden = bgType!=='gradient';
-    bgDirWrap.hidden    = bgType!=='gradient';
-    bgImageWrap.hidden  = bgType!=='image';
-    bgColorLbl.textContent = bgType==='gradient' ? '색 1' : '배경색';
+    bgSolidPanel.hidden = bgType!=='solid';
+    bgGradientPanel.hidden = bgType!=='gradient';
+    bgImagePanel.hidden = bgType!=='image';
   }
   document.querySelectorAll('[data-bg]').forEach(chip=>{
     chip.addEventListener('click', ()=>{
@@ -411,8 +496,9 @@
       if(!running) drawStatic();
     });
   });
-  document.getElementById('bgColorInput').addEventListener('input', e=>{ bgColor=e.target.value; if(!running) drawStatic(); });
-  document.getElementById('bgColor2Input').addEventListener('input', e=>{ bgColor2=e.target.value; if(!running) drawStatic(); });
+  document.getElementById('bgColorInput').addEventListener('input', e=>{ bgSolidColor=e.target.value; if(!running) drawStatic(); });
+  document.getElementById('bgGradientColor1Input').addEventListener('input', e=>{ bgGradientColor1=e.target.value; if(!running) drawStatic(); });
+  document.getElementById('bgGradientColor2Input').addEventListener('input', e=>{ bgGradientColor2=e.target.value; if(!running) drawStatic(); });
   document.getElementById('bgDirSelect').addEventListener('change', e=>{ bgGradDir=e.target.value; if(!running) drawStatic(); });
   document.getElementById('bgDim').addEventListener('input', e=>{ bgDim=+e.target.value; if(!running) drawStatic(); });
 
@@ -425,8 +511,14 @@
         const res = await new window.EyeDropper().open();
         const hex = res.sRGBHex;
         const which = btn.dataset.pick;
-        const target = which==='glow' ? 'colorInput' : which==='bg1' ? 'bgColorInput' : 'bgColor2Input';
-        const inp = document.getElementById(target);
+        const target = {
+          glow:'colorInput',
+          solid:'bgColorInput',
+          grad1:'bgGradientColor1Input',
+          grad2:'bgGradientColor2Input'
+        }[which];
+        const inp = target ? document.getElementById(target) : null;
+        if(!inp) return;
         inp.value = hex;
         inp.dispatchEvent(new Event('input'));   // 기존 핸들러 재사용
       }catch(e){ /* 사용자가 취소 */ }
@@ -486,6 +578,15 @@
     ctx.closePath();
   }
   const acc = (a)=>`rgba(${accent.r},${accent.g},${accent.b},${a})`;
+
+  function getTitleFontStack(mode){
+    switch(mode){
+      case 'poster': return '"Arial Black","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+      case 'serif': return '"Batang","Times New Roman","Noto Serif KR",serif';
+      case 'mono': return '"D2Coding","Consolas","Malgun Gothic",monospace';
+      default: return '"Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif';
+    }
+  }
 
   function freqToBin(freq){
     if(!audioCtx || !analyser || !freqData) return 0;
@@ -631,7 +732,7 @@
   function renderFrame(isStatic){
     // background: 단색 / 그라데이션 / 이미지
     if(bgType==='image' && bgImage && bgImage.complete && bgImage.naturalWidth){
-      try{ drawImageCover(bgImage, 0,0,W,H,0); }catch(e){ ctx.fillStyle=bgColor; ctx.fillRect(0,0,W,H); }
+      try{ drawImageCover(bgImage, 0,0,W,H,0); }catch(e){ ctx.fillStyle=bgSolidColor; ctx.fillRect(0,0,W,H); }
       if(bgDim>0){ ctx.fillStyle=`rgba(0,0,0,${bgDim/100})`; ctx.fillRect(0,0,W,H); }
     } else if(bgType==='gradient'){
       let grad;
@@ -639,10 +740,10 @@
       else if(bgGradDir==='vertical') grad = ctx.createLinearGradient(0,0,0,H);
       else if(bgGradDir==='horizontal') grad = ctx.createLinearGradient(0,0,W,0);
       else                            grad = ctx.createLinearGradient(0,0,W,H);
-      grad.addColorStop(0,bgColor); grad.addColorStop(1,bgColor2);
+      grad.addColorStop(0,bgGradientColor1); grad.addColorStop(1,bgGradientColor2);
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
     } else {
-      ctx.fillStyle = bgColor; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = bgSolidColor; ctx.fillRect(0,0,W,H);
     }
 
     // 은은한 비네트 (배경에 깊이감)
@@ -832,9 +933,15 @@
     if(title){
       ctx.save();
       ctx.textAlign='center';
-      ctx.font = `800 ${Math.round(H*0.052)}px "Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif`;
+      ctx.font = `800 ${Math.round(H*0.052)}px ${getTitleFontStack(titleFont)}`;
       const ty = H*0.88;
-      ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=18;
+      if(titleShadow){
+        ctx.shadowColor='rgba(0,0,0,0.8)';
+        ctx.shadowBlur=18;
+      }else{
+        ctx.shadowColor='rgba(0,0,0,0)';
+        ctx.shadowBlur=0;
+      }
       ctx.fillStyle=titleColor;
       ctx.fillText(title, cx, ty);
       ctx.restore();
@@ -962,6 +1069,7 @@
 
   // initial
   setAccentVar();
+  refreshBgUI();
   applyCanvasResolution(getRecordPreset());
   drawStatic();
 })();
