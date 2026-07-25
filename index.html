@@ -64,6 +64,9 @@
   .range-box input[type=range]{display:block;margin-top:2px}
   .bg-mode-panel{margin-top:12px}
   .bg-color-grid{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+  .file-list{margin-top:8px;padding:10px 12px;border:1px solid var(--panel-line);border-radius:10px;background:#fafafd;font-size:12px;color:var(--ink-dim);line-height:1.55;display:flex;flex-direction:column;gap:4px;min-height:44px}
+  .file-list .muted{color:var(--ink-dim)}
+  .helper-text{font-size:11px;color:var(--ink-dim);line-height:1.55;margin-top:8px}
 
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
@@ -151,10 +154,10 @@
       <div class="field">
         <label class="lbl">녹화 화질</label>
         <select id="recordQuality">
+          <option value="720_60">720p 가볍게 · 60fps · 12Mbps</option>
           <option value="1080">1080p 고화질 · 30fps · 20Mbps</option>
-          <option value="1440" selected>1440p 최고화질 · 30fps · 32Mbps</option>
-          <option value="1080_60">1080p 부드럽게 · 60fps · 30Mbps</option>
-          <option value="2160">4K 초고화질 · 30fps · 55Mbps</option>
+          <option value="1080_60" selected>1080p 기본 · 60fps · 30Mbps</option>
+          <option value="1440">1440p 최고화질 · 30fps · 32Mbps</option>
         </select>
       </div>
       <div class="preview-note">원본 이미지가 작으면 해상도를 올려도 선명도가 제한될 수 있어요.</div>
@@ -169,8 +172,13 @@
         <div class="drop" id="imgDrop">🖼️ <b>캐릭터 이미지</b> 클릭 또는 드래그<div class="filename" id="imgName"></div></div>
         <div style="height:10px"></div>
         <div class="drop" id="audioDrop">🎵 <b>노래 mp3</b> 클릭 또는 드래그<div class="filename" id="audioName"></div></div>
+        <div style="height:10px"></div>
+        <div class="drop" id="overlayDrop">✨ <b>꾸미기 PNG</b> 클릭 또는 드래그 <small>(최대 5개)</small></div>
+        <div class="file-list" id="overlayList"><span class="muted">추가된 꾸미기 PNG 없음</span></div>
+        <div class="helper-text">투명 PNG를 캔버스 위에 자유롭게 배치할 수 있어요. 선택하면 이동, 크기 조절, 회전, 삭제(X)가 가능해요.</div>
         <input type="file" id="imgInput" accept="image/*" hidden>
         <input type="file" id="audioInput" accept="audio/*" hidden>
+        <input type="file" id="overlayInput" accept="image/png,image/webp,image/*" multiple hidden>
       </div>
 
       <div class="card">
@@ -213,9 +221,11 @@
           <label class="lbl">제목 그림자</label>
           <div class="toggle-row" style="margin-top:0">
             <span class="chip on" id="titleShadowChip">그림자 사용</span>
+            <span class="chip on" id="titleGuideChip">가운데 정렬 가이드</span>
+            <button type="button" class="chip" id="titleCenterBtn">가운데 X 맞춤</button>
           </div>
         </div>
-        <div class="status" style="margin-top:9px">미리보기의 제목을 직접 드래그해 원하는 위치에 놓을 수 있어요.</div>
+        <div class="status" style="margin-top:9px">미리보기의 제목을 직접 드래그할 수 있고, 세로 가운데 기준선에 맞춰 정렬돼요.</div>
       </div>
 
       <div class="card">
@@ -308,7 +318,7 @@
   </div>
 
   <div class="foot">
-    <b>녹화 안내</b> — 녹화는 실시간(노래 길이만큼)으로 진행돼요. 녹화 버튼을 누르면 노래가 처음부터 재생되며, 끝나면 자동으로 <code>.webm</code> 파일이 다운로드돼요. 유튜브는 webm 업로드를 그대로 지원해요. 1440p·4K는 파일이 크고 기기 성능을 더 사용해요. mp4가 꼭 필요하면 다운로드한 webm을 변환기(예: CloudConvert)에 넣으면 돼요.
+    <b>녹화 안내</b> — 녹화는 실시간(노래 길이만큼)으로 진행돼요. 녹화 버튼을 누르면 노래가 처음부터 재생되며, 끝나면 자동으로 <code>.webm</code> 파일이 다운로드돼요. 유튜브는 webm 업로드를 그대로 지원해요. 720p/1080p 60fps는 더 부드럽고, 1440p는 파일이 더 커지고 기기 성능을 더 사용해요. mp4가 꼭 필요하면 다운로드한 webm을 변환기(예: CloudConvert)에 넣으면 돼요.
   </div>
 </div>
 
@@ -357,6 +367,12 @@
   let titleDragOffset = {x:0,y:0};
   let titleShadow = true;
   let titleComposing = false;
+  let showTitleGuide = true;
+  let isRecording = false;
+  let overlays = [];
+  let overlaySerial = 0;
+  let selectedOverlayId = null;
+  let activeDrag = null;
 
   const els = {
     imgInput: document.getElementById('imgInput'),
@@ -365,6 +381,9 @@
     audioDrop: document.getElementById('audioDrop'),
     imgName: document.getElementById('imgName'),
     audioName: document.getElementById('audioName'),
+    overlayInput: document.getElementById('overlayInput'),
+    overlayDrop: document.getElementById('overlayDrop'),
+    overlayList: document.getElementById('overlayList'),
     playBtn: document.getElementById('playBtn'),
     recBtn: document.getElementById('recBtn'),
     stopRecBtn: document.getElementById('stopRecBtn'),
@@ -382,6 +401,8 @@
     titleSize: document.getElementById('titleSize'),
     titleSpacing: document.getElementById('titleSpacing'),
     titleShadowChip: document.getElementById('titleShadowChip'),
+    titleGuideChip: document.getElementById('titleGuideChip'),
+    titleCenterBtn: document.getElementById('titleCenterBtn'),
   };
 
   function setStatus(html){ statusEl.innerHTML = html; }
@@ -398,6 +419,15 @@
 
   wireDrop(els.imgDrop, els.imgInput, loadImage);
   wireDrop(els.audioDrop, els.audioInput, loadAudio);
+  wireMultiDrop(els.overlayDrop, els.overlayInput, loadOverlayFiles);
+
+  function wireMultiDrop(drop, input, handler){
+    drop.addEventListener('click', ()=>input.click());
+    input.addEventListener('change', e=>{ if(e.target.files?.length) handler(Array.from(e.target.files)); input.value=''; });
+    ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+    drop.addEventListener('drop',e=>{ const files=Array.from(e.dataTransfer.files||[]); if(files.length) handler(files); });
+  }
 
   function loadImage(file){
     els.imgName.textContent = file.name;
@@ -419,6 +449,60 @@
     audioReady = false;
     audio.load();
     audio.addEventListener('loadedmetadata', ()=>{ audioReady = true; maybeEnable(); }, {once:true});
+  }
+
+  function escapeHtml(text){
+    return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+  function updateOverlayList(){
+    if(!els.overlayList) return;
+    if(!overlays.length){
+      els.overlayList.innerHTML = '<span class="muted">추가된 꾸미기 PNG 없음</span>';
+      return;
+    }
+    els.overlayList.innerHTML = overlays.map((item, idx)=>`<span>${idx+1}. ${escapeHtml(item.name)}</span>`).join('');
+  }
+  function loadOverlayFiles(files){
+    if(!files?.length) return;
+    const room = Math.max(0, 5 - overlays.length);
+    const accepted = files.slice(0, room);
+    if(files.length > room){
+      setStatus('꾸미기 PNG는 최대 <b>5개</b>까지 넣을 수 있어요. 먼저 들어온 파일부터 추가했어요.');
+    }
+    accepted.forEach(file=>{
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = ()=>{
+        const defaultWidth = Math.min(0.24, Math.max(0.09, (Math.min(im.naturalWidth || 320, 460)) / 1920));
+        const id = ++overlaySerial;
+        overlays.push({
+          id,
+          name:file.name,
+          img:im,
+          x:0.5,
+          y:0.5,
+          widthRatio:defaultWidth,
+          rotation:0
+        });
+        selectedOverlayId = id;
+        updateOverlayList();
+        if(!running) drawStatic();
+      };
+      im.src = url;
+    });
+  }
+  function removeOverlay(id){
+    overlays = overlays.filter(item=>item.id!==id);
+    if(selectedOverlayId===id) selectedOverlayId = overlays.length ? overlays[overlays.length-1].id : null;
+    updateOverlayList();
+    if(!running) drawStatic();
+  }
+  function getOverlayById(id){ return overlays.find(item=>item.id===id) || null; }
+  function bringOverlayToFront(id){
+    const idx = overlays.findIndex(item=>item.id===id);
+    if(idx<0 || idx===overlays.length-1) return;
+    const [item] = overlays.splice(idx,1);
+    overlays.push(item);
   }
 
   function maybeEnable(){
@@ -502,44 +586,173 @@
       p.x>=titleBounds.left-18 && p.x<=titleBounds.right+18 &&
       p.y>=titleBounds.top-14 && p.y<=titleBounds.bottom+14);
   }
+  function distance(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function worldFromLocal(cx,cy,rotation,lx,ly){
+    const c=Math.cos(rotation), s=Math.sin(rotation);
+    return { x: cx + lx*c - ly*s, y: cy + lx*s + ly*c };
+  }
+  function localFromWorld(cx,cy,rotation,x,y){
+    const dx=x-cx, dy=y-cy;
+    const c=Math.cos(rotation), s=Math.sin(rotation);
+    return { x: dx*c + dy*s, y: -dx*s + dy*c };
+  }
+  function getOverlayMetrics(item){
+    const iw = item?.img?.naturalWidth || item?.img?.width || 1;
+    const ih = item?.img?.naturalHeight || item?.img?.height || 1;
+    const ratio = iw/ih || 1;
+    const w = Math.max(26, item.widthRatio * W);
+    const h = w / ratio;
+    return {cx:item.x*W, cy:item.y*H, w, h, ratio};
+  }
+  function getOverlayHandles(item){
+    const m = getOverlayMetrics(item);
+    return {
+      delete: worldFromLocal(m.cx,m.cy,item.rotation,m.w/2+20,-m.h/2-20),
+      resize: worldFromLocal(m.cx,m.cy,item.rotation,m.w/2,m.h/2),
+      rotate: worldFromLocal(m.cx,m.cy,item.rotation,0,-m.h/2-30)
+    };
+  }
+  function hitTestOverlay(p, item){
+    const handles = getOverlayHandles(item);
+    if(distance(p, handles.delete) <= 16) return {type:'delete', item};
+    if(distance(p, handles.resize) <= 16) return {type:'resize', item};
+    if(distance(p, handles.rotate) <= 16) return {type:'rotate', item};
+    const m = getOverlayMetrics(item);
+    const lp = localFromWorld(m.cx,m.cy,item.rotation,p.x,p.y);
+    if(Math.abs(lp.x) <= m.w/2 && Math.abs(lp.y) <= m.h/2) return {type:'body', item};
+    return null;
+  }
+  function findOverlayHit(p){
+    for(let i=overlays.length-1;i>=0;i--){
+      const hit = hitTestOverlay(p, overlays[i]);
+      if(hit) return hit;
+    }
+    return null;
+  }
+
   canvas.addEventListener('pointerdown', e=>{
     const p=canvasPoint(e);
-    if(!pointInTitle(p)) return;
-    titleDragging=true;
-    titleDragOffset.x=p.x-titleX*W;
-    titleDragOffset.y=p.y-titleY*H;
-    canvas.setPointerCapture?.(e.pointerId);
-    canvas.style.cursor='grabbing';
-    e.preventDefault();
-  });
-  canvas.addEventListener('pointermove', e=>{
-    const p=canvasPoint(e);
-    if(!titleDragging){
-      canvas.style.cursor=pointInTitle(p)?'grab':'default';
+    const overlayHit = findOverlayHit(p);
+    if(overlayHit){
+      selectedOverlayId = overlayHit.item.id;
+      bringOverlayToFront(selectedOverlayId);
+      const current = getOverlayById(selectedOverlayId);
+      if(overlayHit.type==='delete'){
+        removeOverlay(selectedOverlayId);
+        canvas.style.cursor='default';
+        e.preventDefault();
+        return;
+      }
+      if(overlayHit.type==='body'){
+        activeDrag = {type:'overlay-move', id:current.id, offsetX:p.x-current.x*W, offsetY:p.y-current.y*H};
+        canvas.style.cursor='grabbing';
+      }else if(overlayHit.type==='resize'){
+        activeDrag = {type:'overlay-resize', id:current.id};
+        canvas.style.cursor='nwse-resize';
+      }else if(overlayHit.type==='rotate'){
+        const m = getOverlayMetrics(current);
+        activeDrag = {type:'overlay-rotate', id:current.id, startRotation:current.rotation, startAngle:Math.atan2(p.y-m.cy,p.x-m.cx)};
+        canvas.style.cursor='crosshair';
+      }
+      canvas.setPointerCapture?.(e.pointerId);
+      if(!running) drawStatic();
+      e.preventDefault();
       return;
     }
-    const halfW=titleBounds ? titleBounds.width/2 : 0;
-    const halfH=titleBounds ? titleBounds.height/2 : 0;
-    const nx=Math.max(halfW+12,Math.min(W-halfW-12,p.x-titleDragOffset.x));
-    const ny=Math.max(halfH+12,Math.min(H-halfH-12,p.y-titleDragOffset.y));
-    titleX=nx/W;
-    titleY=ny/H;
+
+    if(pointInTitle(p)){
+      titleDragging=true;
+      titleDragOffset.x=p.x-titleX*W;
+      titleDragOffset.y=p.y-titleY*H;
+      canvas.setPointerCapture?.(e.pointerId);
+      canvas.style.cursor='grabbing';
+      e.preventDefault();
+      return;
+    }
+
+    selectedOverlayId = null;
     if(!running) drawStatic();
-    e.preventDefault();
   });
-  function endTitleDrag(e){
+
+  canvas.addEventListener('pointermove', e=>{
+    const p=canvasPoint(e);
+    if(activeDrag){
+      const item = getOverlayById(activeDrag.id);
+      if(!item) return;
+      if(activeDrag.type==='overlay-move'){
+        const m = getOverlayMetrics(item);
+        const nx = Math.max(m.w/2, Math.min(W - m.w/2, p.x - activeDrag.offsetX));
+        const ny = Math.max(m.h/2, Math.min(H - m.h/2, p.y - activeDrag.offsetY));
+        item.x = nx / W;
+        item.y = ny / H;
+        canvas.style.cursor='grabbing';
+      }else if(activeDrag.type==='overlay-resize'){
+        const m = getOverlayMetrics(item);
+        const lp = localFromWorld(m.cx,m.cy,item.rotation,p.x,p.y);
+        const wantedW = Math.max(Math.abs(lp.x)*2, Math.abs(lp.y)*2*m.ratio, 28);
+        item.widthRatio = Math.max(0.03, Math.min(0.9, wantedW / W));
+        canvas.style.cursor='nwse-resize';
+      }else if(activeDrag.type==='overlay-rotate'){
+        const m = getOverlayMetrics(item);
+        const angle = Math.atan2(p.y-m.cy,p.x-m.cx);
+        item.rotation = activeDrag.startRotation + (angle - activeDrag.startAngle);
+        canvas.style.cursor='crosshair';
+      }
+      if(!running) drawStatic();
+      e.preventDefault();
+      return;
+    }
+
+    if(titleDragging){
+      const halfW=titleBounds ? titleBounds.width/2 : 0;
+      const halfH=titleBounds ? titleBounds.height/2 : 0;
+      let nx=Math.max(halfW+12,Math.min(W-halfW-12,p.x-titleDragOffset.x));
+      let ny=Math.max(halfH+12,Math.min(H-halfH-12,p.y-titleDragOffset.y));
+      if(Math.abs(nx - W/2) < 24) nx = W/2;
+      titleX=nx/W;
+      titleY=ny/H;
+      canvas.style.cursor='grabbing';
+      if(!running) drawStatic();
+      e.preventDefault();
+      return;
+    }
+
+    const hoverOverlay = findOverlayHit(p);
+    if(hoverOverlay){
+      canvas.style.cursor = hoverOverlay.type==='body' ? 'grab' : (hoverOverlay.type==='rotate' ? 'crosshair' : 'pointer');
+      return;
+    }
+    canvas.style.cursor=pointInTitle(p)?'grab':'default';
+  });
+
+  function endPointerInteraction(e){
+    if(activeDrag){
+      activeDrag = null;
+      canvas.releasePointerCapture?.(e.pointerId);
+      canvas.style.cursor='default';
+      return;
+    }
     if(!titleDragging) return;
     titleDragging=false;
     canvas.releasePointerCapture?.(e.pointerId);
-    canvas.style.cursor='grab';
+    canvas.style.cursor='default';
   }
-  canvas.addEventListener('pointerup', endTitleDrag);
-  canvas.addEventListener('pointercancel', endTitleDrag);
-  canvas.addEventListener('pointerleave', ()=>{ if(!titleDragging) canvas.style.cursor='default'; });
+  canvas.addEventListener('pointerup', endPointerInteraction);
+  canvas.addEventListener('pointercancel', endPointerInteraction);
+  canvas.addEventListener('pointerleave', ()=>{ if(!titleDragging && !activeDrag) canvas.style.cursor='default'; });
   els.titleShadowChip.addEventListener('click', function(){
     titleShadow = !titleShadow;
     this.classList.toggle('on', titleShadow);
     this.textContent = titleShadow ? '그림자 사용' : '그림자 없음';
+    if(!running) drawStatic();
+  });
+  els.titleGuideChip.addEventListener('click', function(){
+    showTitleGuide = !showTitleGuide;
+    this.classList.toggle('on', showTitleGuide);
+    if(!running) drawStatic();
+  });
+  els.titleCenterBtn.addEventListener('click', ()=>{
+    titleX = 0.5;
     if(!running) drawStatic();
   });
   els.twinkle.addEventListener('input', ()=>{ if(!running) drawStatic(); });
@@ -652,6 +865,56 @@
       x+=widths[i]+spacing;
     }
     return total;
+  }
+  function drawTitleGuide(){
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.22)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([10,10]);
+    ctx.beginPath();
+    ctx.moveTo(W/2,0);
+    ctx.lineTo(W/2,H);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawOverlayItem(item, editingDecorations){
+    if(!item?.img) return;
+    const m = getOverlayMetrics(item);
+    ctx.save();
+    ctx.translate(m.cx,m.cy);
+    ctx.rotate(item.rotation);
+    ctx.drawImage(item.img,-m.w/2,-m.h/2,m.w,m.h);
+    if(editingDecorations && selectedOverlayId===item.id){
+      ctx.strokeStyle='rgba(255,255,255,0.95)';
+      ctx.lineWidth=2;
+      ctx.setLineDash([10,6]);
+      ctx.strokeRect(-m.w/2,-m.h/2,m.w,m.h);
+      ctx.setLineDash([]);
+      const handleRadius = 10;
+      const localHandles = {
+        rotate:{x:0,y:-m.h/2-30},
+        resize:{x:m.w/2,y:m.h/2},
+        delete:{x:m.w/2+20,y:-m.h/2-20}
+      };
+      ctx.strokeStyle='rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.moveTo(0,-m.h/2); ctx.lineTo(localHandles.rotate.x,localHandles.rotate.y);
+      ctx.stroke();
+      ctx.fillStyle='#ffffff';
+      ctx.beginPath(); ctx.arc(localHandles.rotate.x,localHandles.rotate.y,handleRadius,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#8a52ff';
+      ctx.beginPath(); ctx.arc(localHandles.resize.x,localHandles.resize.y,handleRadius,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ff3b60';
+      ctx.beginPath(); ctx.arc(localHandles.delete.x,localHandles.delete.y,handleRadius+1,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#111';
+      ctx.font=`700 ${Math.max(11, 12*(H/1080))}px "Pretendard",sans-serif`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText('↻', localHandles.rotate.x, localHandles.rotate.y+0.5);
+      ctx.fillText('X', localHandles.delete.x, localHandles.delete.y+0.5);
+      ctx.fillText('↘', localHandles.resize.x, localHandles.resize.y+0.5);
+    }
+    ctx.restore();
   }
 
   function freqToBin(freq){
@@ -818,6 +1081,10 @@
     vg.addColorStop(1,'rgba(0,0,0,0.20)');
     ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 
+    if(showTitleGuide && title && !isRecording){
+      drawTitleGuide();
+    }
+
     // audio analysis: 저음 + 실제 파형 음량(RMS)을 함께 읽는다.
     let bass=0, mid=0, energy=0, rms=0;
     if(!isStatic && analyser){
@@ -892,7 +1159,7 @@
       const baseFade = glowAmt * 0.010;              // 낮은 설정에서는 거의 안 보이게
 
       // 1) 가장 바깥쪽 넓은 오라
-      const outerR = halo*(0.035 + glowAmt*0.24 + pulse*(0.20 + glowAmt*0.42) + boom*(0.24 + glowAmt*0.62));
+      const outerR = halo*(0.06 + glowAmt*0.34 + pulse*(0.32 + glowAmt*0.62) + boom*(0.34 + glowAmt*0.92));
       const outer = ctx.createRadialGradient(cx,cy,halo*0.08,cx,cy,outerR);
       outer.addColorStop(0,acc(baseFade + glowAmt*0.010 + pulse*0.025));
       outer.addColorStop(0.22,acc(baseFade + glowAmt*0.020 + pulse*0.055 + boom*0.045));
@@ -903,7 +1170,7 @@
       ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
 
       // 2) 중간층 메인 후광
-      const midR = halo*(0.025 + glowAmt*0.18 + pulse*(0.14 + glowAmt*0.27) + boom*(0.12 + glowAmt*0.25));
+      const midR = halo*(0.04 + glowAmt*0.24 + pulse*(0.22 + glowAmt*0.40) + boom*(0.20 + glowAmt*0.38));
       const midGlow = ctx.createRadialGradient(cx,cy,halo*0.04,cx,cy,midR);
       midGlow.addColorStop(0,acc(baseFade + glowAmt*0.016 + pulse*0.040));
       midGlow.addColorStop(0.36,acc(baseFade + pulse*0.095 + boom*0.055));
@@ -913,7 +1180,7 @@
       ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
 
       // 3) 안쪽 코어 글로우
-      const coreR = halo*(0.012 + glowAmt*0.11 + pulse*(0.07 + glowAmt*0.10));
+      const coreR = halo*(0.018 + glowAmt*0.14 + pulse*(0.10 + glowAmt*0.16));
       const core = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
       core.addColorStop(0,acc(baseFade + glowAmt*0.030 + pulse*0.11 + boom*0.08));
       core.addColorStop(0.45,acc(baseFade + pulse*0.075 + boom*0.05));
@@ -995,6 +1262,9 @@
     });
     sparkles=sparkles.filter(s=>s.life>0);
 
+    // user overlays (투명 PNG 꾸미기)
+    overlays.forEach(item=>drawOverlayItem(item, !isRecording));
+
     // title — 미리보기에서 직접 드래그하며 크기와 자간도 조정 가능
     if(title){
       ctx.save();
@@ -1057,14 +1327,14 @@
 
   // ---------- record ----------
   const RECORD_PRESETS = {
+    '720_60':  {width:1280,height:720,fps:60,videoBits:12000000,audioBits:192000,label:'720p 60fps'},
     '1080':    {width:1920,height:1080,fps:30,videoBits:20000000,audioBits:256000,label:'1080p 고화질'},
-    '1440':    {width:2560,height:1440,fps:30,videoBits:32000000,audioBits:320000,label:'1440p 최고화질'},
     '1080_60': {width:1920,height:1080,fps:60,videoBits:30000000,audioBits:320000,label:'1080p 60fps'},
-    '2160':    {width:3840,height:2160,fps:30,videoBits:55000000,audioBits:320000,label:'4K 초고화질'}
+    '1440':    {width:2560,height:1440,fps:30,videoBits:32000000,audioBits:320000,label:'1440p 최고화질'}
   };
 
   function getRecordPreset(){
-    return RECORD_PRESETS[els.recordQuality.value] || RECORD_PRESETS['1440'];
+    return RECORD_PRESETS[els.recordQuality.value] || RECORD_PRESETS['1080_60'];
   }
 
   function applyCanvasResolution(preset){
@@ -1111,6 +1381,7 @@
     chunks=[];
     recorder.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
     recorder.onstop = ()=>{
+      isRecording = false;
       const blob = new Blob(chunks,{type:'video/webm'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1128,6 +1399,7 @@
     await audio.play();
     running = true; loop();
     recorder.start(1000);
+    isRecording = true;
     els.recBtn.classList.add('recording');
     els.recBtn.style.display='none'; els.stopRecBtn.style.display='';
     els.playBtn.disabled=true;
@@ -1140,7 +1412,7 @@
   });
 
   els.stopRecBtn.addEventListener('click', ()=>{
-    audio.pause(); running=false; els.playBtn.textContent='▶ 재생';
+    audio.pause(); running=false; isRecording = false; els.playBtn.textContent='▶ 재생';
     if(recorder && recorder.state!=='inactive') recorder.stop();
   });
 
@@ -1151,6 +1423,7 @@
   // initial
   setAccentVar();
   refreshBgUI();
+  updateOverlayList();
   applyCanvasResolution(getRecordPreset());
   drawStatic();
 })();
