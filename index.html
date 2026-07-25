@@ -107,14 +107,14 @@
 <div class="wrap">
   <header>
     <h1>스챗 뮤직비디오 메이커</h1>
-    <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 회전 별 글로우 비주얼</span>
+    <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 별 궤도 & 후광 비주얼</span>
   </header>
 
   <div class="stage-wrap">
     <canvas id="stage" width="1920" height="1080"></canvas>
     <div class="empty-hint" id="hint">
       <div class="big">캐릭터 이미지와 노래를 넣어주세요</div>
-      <div>이미지 테두리를 따라 네 꼭짓점 별이 계속 회전하고 반짝여요</div>
+      <div>이미지 뒤 후광이 음악에 맞춰 밝아졌다 돌아오고, 별은 궤도를 따라 줄지어 회전해요</div>
     </div>
   </div>
 
@@ -132,7 +132,7 @@
       <h3>2 · 스타일</h3>
       <div class="field">
         <label class="lbl">제목 / 캐릭터명 (선택)</label>
-        <input type="text" id="titleInput" placeholder="예: 지견우 — 회전 별 MV" maxlength="40">
+        <input type="text" id="titleInput" placeholder="예: 지견우 — 글로우 MV" maxlength="40">
       </div>
       <div style="height:12px"></div>
       <label class="lbl">글로우 색</label>
@@ -143,6 +143,9 @@
       </div>
 
       <div style="height:14px"></div>
+      <label class="lbl">별 개수</label>
+      <input type="range" id="starCount" min="0" max="16" value="7">
+      <div style="height:8px"></div>
       <label class="lbl">별 크기</label>
       <input type="range" id="intensity" min="0" max="100" value="55">
       <div style="height:8px"></div>
@@ -151,6 +154,9 @@
       <div style="height:8px"></div>
       <label class="lbl">반짝임 세기</label>
       <input type="range" id="twinkle" min="0" max="100" value="60">
+      <div style="height:8px"></div>
+      <label class="lbl">뒤 후광 세기</label>
+      <input type="range" id="backGlow" min="0" max="100" value="68">
       <div class="toggle-row">
         <span class="chip on" id="roundChip">모서리 둥글게</span>
         <span class="chip on" id="particleChip">반짝 파편</span>
@@ -255,9 +261,11 @@
     stopRecBtn: document.getElementById('stopRecBtn'),
     colorInput: document.getElementById('colorInput'),
     autoColorChip: document.getElementById('autoColorChip'),
+    starCount: document.getElementById('starCount'),
     intensity: document.getElementById('intensity'),
     float: document.getElementById('float'),
     twinkle: document.getElementById('twinkle'),
+    backGlow: document.getElementById('backGlow'),
     titleInput: document.getElementById('titleInput'),
   };
 
@@ -302,7 +310,7 @@
     const ok = img && audio.src;
     els.playBtn.disabled = !ok;
     els.recBtn.disabled = !ok;
-    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 이미지 테두리에 회전 별이 들어가요.');
+    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 별은 줄지어 돌고, 뒤 후광은 음악에 맞춰 밝아졌다 돌아와요.');
   }
 
   // ---------- dominant color ----------
@@ -340,6 +348,8 @@
   document.getElementById('particleChip').addEventListener('click', function(){ particles=!particles; this.classList.toggle('on',particles); });
   els.titleInput.addEventListener('input', e=>{ title=e.target.value; if(!running) drawStatic(); });
   els.twinkle.addEventListener('input', ()=>{ if(!running) drawStatic(); });
+  els.starCount.addEventListener('input', ()=>{ if(!running) drawStatic(); });
+  els.backGlow.addEventListener('input', ()=>{ if(!running) drawStatic(); });
 
   // background controls
   const bgColor2Wrap = document.getElementById('bgColor2Wrap');
@@ -502,40 +512,46 @@
   }
 
   function drawOrbitStars(cardX,cardY,cardW,cardH,isStatic){
+    const count = Math.max(0, Math.round(Number(els.starCount.value) || 0));
+    if(count <= 0) return;
+
     const starSize = 12 + (els.intensity.value/100)*22;
     const speed = 0.035 + (els.float.value/100)*0.18;
     const twinkle = els.twinkle.value/100;
     const time = isStatic ? 0 : audio.currentTime;
     const orbitPad = Math.max(18, Math.min(cardW,cardH)*0.075);
-    const count = 7;
+    const gap = 0.018 + (1 - Math.min(1, count/16))*0.014; // 많아질수록 조금 더 촘촘
+    const headPhase = (time * speed) % 1;
 
+    // 얇은 궤도선
     ctx.save();
-    ctx.strokeStyle = acc(0.12 + smEnergy*0.12);
-    ctx.lineWidth = 2.4;
-    ctx.shadowColor = acc(0.22);
-    ctx.shadowBlur = 14;
+    ctx.strokeStyle = acc(0.10 + smEnergy*0.10);
+    ctx.lineWidth = 2.1;
+    ctx.shadowColor = acc(0.18 + smEnergy*0.12);
+    ctx.shadowBlur = 12;
     roundRectPath(cardX-orbitPad, cardY-orbitPad, cardW+orbitPad*2, cardH+orbitPad*2, Math.max(14, orbitPad*0.65));
     ctx.stroke();
     ctx.restore();
 
     for(let i=0;i<count;i++){
-      const base = i / count;
-      const phase = (time * speed + base) % 1;
+      const phase = (headPhase - i*gap + 1) % 1; // 한 줄로 trailing
       const p = getOrbitPoint(phase, cardX, cardY, cardW, cardH, orbitPad);
-      const pulse = 0.75 + 0.25*Math.sin(time*3.2 + i*1.3);
-      const react = 1 + smEnergy*0.25 + smBass*0.1;
-      const size = starSize * (0.72 + (i%3)*0.14) * (0.82 + twinkle*0.35*pulse) * react;
-      const alpha = Math.min(1, 0.5 + twinkle*0.35 + pulse*0.2 + smEnergy*0.18);
-      const spin = time*(0.55 + i*0.07) + i*0.8;
+      const rank = count <= 1 ? 1 : 1 - i/(count-1); // 앞쪽이 더 크고 밝음
+      const pulse = 0.78 + 0.22*Math.sin(time*3.0 + i*0.75);
+      const react = 1 + smEnergy*0.28 + smBass*0.12;
+      const size = starSize * (0.55 + rank*0.55) * (0.82 + twinkle*0.32*pulse) * react;
+      const alpha = Math.min(1, 0.32 + rank*0.55 + twinkle*0.18 + smEnergy*0.16);
+      const spin = time*(0.65 + rank*0.25) + i*0.3;
       drawSparkleShape(p.x, p.y, size, spin, alpha);
 
-      if(particles && !isStatic && Math.random() < 0.03 + twinkle*0.04 + smEnergy*0.02){
+      // 앞별 주변에만 살짝 파편
+      if(particles && !isStatic && i < Math.max(2, Math.ceil(count*0.35)) && Math.random() < 0.02 + twinkle*0.035 + smEnergy*0.03){
         sparkles.push({
           x:p.x, y:p.y,
-          vx:(Math.random()-0.5)*(0.4+size*0.05),
-          vy:(Math.random()-0.5)*(0.4+size*0.05),
-          life:0.55 + Math.random()*0.35,
-          size:1.8 + Math.random()*2.5
+          vx:(Math.random()-0.5)*(0.35+size*0.05),
+          vy:(Math.random()-0.5)*(0.35+size*0.05),
+          life:0.45 + Math.random()*0.28,
+          size:1.4 + Math.random()*2.2
         });
       }
     }
@@ -602,12 +618,15 @@
     const cardY = cy - cardH/2;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
 
-    // breathing glow behind (이미지 크기 기준 halo)
+    // 이미지 뒤 후광: 음악 세기에 맞춰 커졌다가 다시 돌아오는 펄스형 글로우
     const halo = Math.hypot(cardW,cardH)/2;
-    const glowR = halo*(1.04 + smEnergy*0.36);
-    const g = ctx.createRadialGradient(cx, cy, halo*0.25, cx, cy, glowR);
-    g.addColorStop(0, acc(0.44*(0.42+smEnergy)));
-    g.addColorStop(0.5, acc(0.16*(0.5+smEnergy)));
+    const glowStrength = (Number(els.backGlow.value) || 0) / 100;
+    const glowPulse = 0.25 + smEnergy*0.9 + smBass*0.45;
+    const glowR = halo*(0.98 + glowStrength*0.18 + glowPulse*(0.22 + glowStrength*0.32));
+    const g = ctx.createRadialGradient(cx, cy, halo*0.18, cx, cy, glowR);
+    g.addColorStop(0, acc(0.30 + glowStrength*0.22 + smEnergy*0.18));
+    g.addColorStop(0.28, acc(0.16 + glowStrength*0.15 + glowPulse*0.08));
+    g.addColorStop(0.62, acc(0.06 + glowStrength*0.10 + glowPulse*0.06));
     g.addColorStop(1, acc(0));
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.arc(cx,cy,glowR,0,Math.PI*2); ctx.fill();
