@@ -246,6 +246,9 @@
   let bgImage = null;
   let bgDim = 35;
   let smBass = 0, smMid = 0, smEnergy = 0; // smoothed values
+  let prevBass = 0, prevRms = 0;
+  let glowEnvelope = 0;
+  let loudFloor = 0.04, loudCeil = 0.20;
   let sparkles = [];
   let title = '';
 
@@ -565,6 +568,8 @@
   // ---------- render ----------
   function drawStatic(){
     smBass=smMid=smEnergy=0;
+    prevBass=prevRms=0;
+    glowEnvelope=0;
     renderFrame(true);
   }
 
@@ -591,20 +596,53 @@
     vg.addColorStop(1,'rgba(0,0,0,0.20)');
     ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 
-    // audio analysis: 실제 주파수(Hz) 범위로 저음/중음을 나눔
-    let bass=0, mid=0, energy=0;
+    // audio analysis: 저음 + 실제 파형 음량(RMS)을 함께 읽는다.
+    let bass=0, mid=0, energy=0, rms=0;
     if(!isStatic && analyser){
       analyser.getByteFrequencyData(freqData);
-      bass = averageFrequency(45,180);
-      mid = averageFrequency(180,2400);
-      let esum=0;
+      analyser.getByteTimeDomainData(timeData);
+
+      bass = averageFrequency(38,210);
+      mid = averageFrequency(210,2600);
+
+      let esum=0, sq=0;
       for(let i=0;i<freqData.length;i++) esum+=freqData[i];
+      for(let i=0;i<timeData.length;i++){
+        const v=(timeData[i]-128)/128;
+        sq+=v*v;
+      }
       energy=(esum/freqData.length)/255;
+      rms=Math.sqrt(sq/Math.max(1,timeData.length));
     }
-    // smoothing
-    smBass  += (bass  - smBass )*0.28;
-    smMid   += (mid   - smMid  )*0.25;
-    smEnergy+= (energy- smEnergy)*0.20;
+
+    // 표시용 스무딩. 후광 펄스 자체는 아래의 별도 엔벌로프로 처리한다.
+    smBass  += (bass  - smBass )*0.34;
+    smMid   += (mid   - smMid  )*0.28;
+    smEnergy+= (energy- smEnergy)*0.24;
+
+    if(!isStatic){
+      // 곡마다 마스터링 음량이 달라도 반응하도록 현재 곡의 조용한 값/큰 값을 자동 추적.
+      const loud = rms*0.70 + bass*0.30;
+      loudFloor += (loud-loudFloor) * (loud<loudFloor ? 0.075 : 0.0015);
+      loudCeil  += (loud-loudCeil)  * (loud>loudCeil  ? 0.055 : 0.0012);
+      if(loudCeil < loudFloor+0.025) loudCeil=loudFloor+0.025;
+      const level=Math.max(0,Math.min(1,(loud-loudFloor)/(loudCeil-loudFloor)));
+
+      // 직전 프레임보다 저음/파형이 갑자기 커진 순간을 킥처럼 잡는다.
+      const bassRise=Math.max(0,bass-prevBass);
+      const rmsRise=Math.max(0,rms-prevRms);
+      const onset=Math.min(1,bassRise*9.5 + rmsRise*14.0);
+      const target=Math.min(1,level*0.42 + onset*1.15);
+
+      // 빠르게 퍼지고, 천천히 원래 크기로 돌아오는 이퀄라이저형 엔벌로프.
+      if(target>glowEnvelope) glowEnvelope += (target-glowEnvelope)*0.82;
+      else glowEnvelope *= 0.885;
+
+      prevBass=bass;
+      prevRms=rms;
+    } else {
+      glowEnvelope=0;
+    }
 
     const cx = W/2, cy = H*0.43;   // 정중앙보다 살짝 위 (하단 자막 공간 확보)
 
@@ -618,34 +656,42 @@
     const cardY = cy - cardH/2;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
 
-    // 이미지 뒤 후광: 이퀄라이저처럼 실제 음량/저음에 크게 반응
+    // 이미지 뒤 후광: 킥/타격을 잡으면 확 퍼졌다가 감쇠하며 돌아온다.
     const halo = Math.hypot(cardW,cardH)/2;
     const glowStrength = (Number(els.backGlow.value) || 0) / 100;
+    const pulse = isStatic ? 0.16 : Math.max(0,Math.min(1,glowEnvelope));
 
-    // analyser 값은 원래 변화폭이 작아서 비선형으로 증폭한다.
-    const energyReact = Math.min(1, Math.pow(smEnergy*4.2, 0.82));
-    const bassReact = Math.min(1, Math.pow(smBass*3.4, 0.78));
-    const midReact = Math.min(1, Math.pow(smMid*3.0, 0.88));
-    const glowPulse = Math.min(1, bassReact*0.72 + energyReact*0.52);
+    // 한 장의 고정 원이 아니라 크기가 다른 후광층 3개가 같은 펄스로 움직인다.
+    const outerR = halo*(0.88 + glowStrength*0.10 + pulse*(0.72 + glowStrength*0.48));
+    const outer = ctx.createRadialGradient(cx,cy,halo*0.22,cx,cy,outerR);
+    outer.addColorStop(0,acc(0.05 + glowStrength*0.07 + pulse*0.12));
+    outer.addColorStop(0.34,acc(0.06 + glowStrength*0.12 + pulse*0.34));
+    outer.addColorStop(0.68,acc(0.02 + glowStrength*0.05 + pulse*0.24));
+    outer.addColorStop(1,acc(0));
+    ctx.fillStyle=outer;
+    ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
 
-    // 바깥 후광: 저음이 칠 때 반지름과 밝기가 확실하게 커졌다가 줄어든다.
-    const glowR = halo*(0.90 + glowStrength*0.10 + glowPulse*(0.48 + glowStrength*0.38));
-    const g = ctx.createRadialGradient(cx, cy, halo*0.20, cx, cy, glowR);
-    g.addColorStop(0, acc(0.10 + glowStrength*0.10 + energyReact*0.20));
-    g.addColorStop(0.32, acc(0.08 + glowStrength*0.16 + glowPulse*0.26));
-    g.addColorStop(0.68, acc(0.02 + glowStrength*0.08 + glowPulse*0.18));
-    g.addColorStop(1, acc(0));
-    ctx.fillStyle=g;
-    ctx.beginPath(); ctx.arc(cx,cy,glowR,0,Math.PI*2); ctx.fill();
+    const midR = halo*(0.72 + pulse*(0.38 + glowStrength*0.20));
+    const midGlow = ctx.createRadialGradient(cx,cy,halo*0.30,cx,cy,midR);
+    midGlow.addColorStop(0,acc(0.05 + pulse*0.18));
+    midGlow.addColorStop(0.58,acc(0.04 + pulse*0.30));
+    midGlow.addColorStop(1,acc(0));
+    ctx.fillStyle=midGlow;
+    ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
 
-    // 중음 반응층: 이미지 가까이에서 한 번 더 숨 쉬듯 번진다.
-    const innerR = halo*(0.72 + midReact*0.24 + glowStrength*0.08);
-    const inner = ctx.createRadialGradient(cx,cy,halo*0.34,cx,cy,innerR);
-    inner.addColorStop(0, acc(0.10 + midReact*0.20));
-    inner.addColorStop(0.58, acc(0.04 + midReact*0.18));
-    inner.addColorStop(1, acc(0));
-    ctx.fillStyle=inner;
-    ctx.beginPath(); ctx.arc(cx,cy,innerR,0,Math.PI*2); ctx.fill();
+    // 펄스 정점에 짧게 생기는 선명한 광륜. 퍼졌다가 사라지는 움직임을 눈에 보이게 만든다.
+    if(pulse>0.035){
+      const ringR=halo*(0.57 + pulse*0.60);
+      ctx.save();
+      ctx.strokeStyle=acc(Math.min(0.80,pulse*0.78));
+      ctx.lineWidth=3 + pulse*11;
+      ctx.shadowColor=acc(Math.min(0.95,pulse));
+      ctx.shadowBlur=18 + pulse*70;
+      ctx.beginPath();
+      ctx.arc(cx,cy,ringR,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // 이미지 테두리를 따라 4꼭지 별 회전
     drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
@@ -663,8 +709,8 @@
       try{
         // rim glow
         ctx.save();
-        ctx.shadowColor = acc(0.28 + glowStrength*0.22 + glowPulse*0.50);
-        ctx.shadowBlur = 22 + glowStrength*28 + glowPulse*145;
+        ctx.shadowColor = acc(0.18 + glowStrength*0.16 + pulse*0.66);
+        ctx.shadowBlur = 14 + glowStrength*18 + pulse*190;
         ctx.fillStyle='#000';
         roundRectPath(cardX,cardY,cardW,cardH,radius); ctx.fill();
         ctx.restore();
@@ -674,8 +720,8 @@
         // border stroke
         ctx.save();
         roundRectPath(cardX,cardY,cardW,cardH,radius);
-        ctx.strokeStyle = acc(0.34 + glowStrength*0.18 + glowPulse*0.46);
-        ctx.lineWidth = 2.5 + glowPulse*5.5;
+        ctx.strokeStyle = acc(0.28 + glowStrength*0.14 + pulse*0.58);
+        ctx.lineWidth = 2.2 + pulse*7.5;
         ctx.stroke();
         ctx.restore();
       }catch(e){ ctx.restore(); }
