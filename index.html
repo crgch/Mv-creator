@@ -168,21 +168,26 @@
   <div class="controls">
     <div class="control-column">
       <div class="card">
-        <h3>1 · 소스</h3>
-        <div class="drop" id="imgDrop">🖼️ <b>캐릭터 이미지</b> 클릭 또는 드래그<div class="filename" id="imgName"></div></div>
-        <div style="height:10px"></div>
+        <h3>노래 파일</h3>
         <div class="drop" id="audioDrop">🎵 <b>노래 mp3</b> 클릭 또는 드래그<div class="filename" id="audioName"></div></div>
-        <div style="height:10px"></div>
-        <div class="drop" id="overlayDrop">✨ <b>꾸미기 PNG</b> 클릭 또는 드래그 <small>(최대 5개)</small></div>
-        <div class="file-list" id="overlayList"><span class="muted">추가된 꾸미기 PNG 없음</span></div>
-        <div class="helper-text">투명 PNG를 캔버스 위에 자유롭게 배치할 수 있어요. 선택하면 이동, 크기 조절, 회전, 삭제(X)가 가능해요.</div>
-        <input type="file" id="imgInput" accept="image/*" hidden>
         <input type="file" id="audioInput" accept="audio/*" hidden>
-        <input type="file" id="overlayInput" accept="image/png,image/webp,image/*" multiple hidden>
       </div>
 
       <div class="card">
-        <h3>2 · 제목</h3>
+        <h3>이미지 넣기</h3>
+        <div class="drop" id="imgDrop">🖼️ <b>썸네일 이미지</b> 클릭 또는 드래그<div class="filename" id="imgName"></div></div>
+        <div style="height:10px"></div>
+        <div class="toggle-row">
+          <span class="chip on" id="imgModeOriginalChip">원본 형식</span>
+          <span class="chip" id="imgModeDiscChip">원반 형식</span>
+          <button type="button" class="chip" id="mainImageCenterBtn">가운데로</button>
+        </div>
+        <div class="status" style="margin-top:9px">썸네일 이미지는 미리보기에서 드래그하고 크기를 조절할 수 있어요. 이퀄라이저와 후광도 이 이미지 중심을 따라가요.</div>
+        <input type="file" id="imgInput" accept="image/*" hidden>
+      </div>
+
+      <div class="card">
+        <h3>제목</h3>
         <div class="field">
           <label class="lbl">제목 / 캐릭터명 (선택)</label>
           <input type="text" id="titleInput" lang="ko" inputmode="text" autocomplete="off" spellcheck="false" placeholder="예: 지견우 — 글로우 MV" maxlength="40">
@@ -229,7 +234,7 @@
       </div>
 
       <div class="card">
-        <h3>3 · 배경</h3>
+        <h3>배경</h3>
         <div class="toggle-row">
           <span class="chip on" data-bg="solid">단색</span>
           <span class="chip" data-bg="gradient">그라데이션</span>
@@ -281,38 +286,73 @@
       </div>
     </div>
 
-    <div class="card equalizer-card">
-      <h3>4 · 이퀄라이저</h3>
-      <div class="mini-stack">
-        <label class="lbl">글로우 색</label>
-        <div class="row">
-          <input type="color" id="colorInput" class="swatch" value="#8a52ff">
-          <label class="chip on" id="autoColorChip">이미지 자동추출</label>
+    <div class="control-column right-column">
+      <div class="card">
+        <h3>이퀄라이저</h3>
+        <div class="mini-stack">
+          <label class="lbl">글로우 색</label>
+          <div class="row">
+            <input type="color" id="colorInput" class="swatch" value="#8a52ff">
+            <label class="chip on" id="autoColorChip">이미지 자동추출</label>
+          </div>
         </div>
+        <div style="height:12px"></div>
+        <label class="lbl">뒤 후광 반응 세기 (0=완전 끄기)</label>
+        <input type="range" id="backGlow" min="0" max="100" value="68">
+        <div style="height:12px"></div>
+        <div class="field">
+          <label class="lbl">이미지 돌아가기 (LP 느낌)</label>
+          <div class="toggle-row" style="margin-top:0">
+            <span class="chip on" id="imgSpinChip">이미지 회전 사용</span>
+          </div>
+          <input type="range" id="imgSpinSpeed" min="0" max="100" value="28" style="margin-top:8px">
+        </div>
+        <div class="helper-text">원반 형식일 때 회전 효과가 가장 자연스럽게 보여요.</div>
       </div>
-      <div style="height:10px"></div>
-      <div class="range-pair">
-        <div class="range-box">
-          <label class="lbl">별 개수</label>
-          <input type="range" id="starCount" min="0" max="16" value="7">
+
+      <div class="card">
+        <h3>꾸미기</h3>
+        <div class="drop" id="overlayDrop">✨ <b>스티커 추가</b> 클릭 또는 드래그 <small>(최대 5개)</small></div>
+        <div class="file-list" id="overlayList"><span class="muted">추가된 스티커 없음</span></div>
+        <div class="helper-text" id="selectedStickerHint">스티커를 선택하면 이동, 크기 조절, 회전, 삭제(X), 움직임 효과를 줄 수 있어요.</div>
+        <div style="height:10px"></div>
+        <div class="mini-grid">
+          <div class="field">
+            <label class="lbl">선택 스티커 효과</label>
+            <select id="overlayAnimSelect">
+              <option value="none">없음</option>
+              <option value="lr">좌우 흔들림</option>
+              <option value="ud">위아래 흔들림</option>
+              <option value="spin">뱅글뱅글 회전</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="lbl">효과 속도</label>
+            <input type="range" id="overlayAnimSpeed" min="0" max="100" value="35">
+          </div>
         </div>
-        <div class="range-box">
-          <label class="lbl">별 크기</label>
-          <input type="range" id="intensity" min="0" max="100" value="55">
+        <div style="height:14px"></div>
+        <div class="range-pair">
+          <div class="range-box">
+            <label class="lbl">별 개수</label>
+            <input type="range" id="starCount" min="0" max="16" value="7">
+          </div>
+          <div class="range-box">
+            <label class="lbl">별 크기</label>
+            <input type="range" id="intensity" min="0" max="100" value="55">
+          </div>
         </div>
-      </div>
-      <div style="height:12px"></div>
-      <label class="lbl">회전 속도</label>
-      <input type="range" id="float" min="0" max="100" value="45">
-      <div style="height:12px"></div>
-      <label class="lbl">반짝임 세기</label>
-      <input type="range" id="twinkle" min="0" max="100" value="60">
-      <div style="height:12px"></div>
-      <label class="lbl">뒤 후광 반응 세기 (0=완전 끄기)</label>
-      <input type="range" id="backGlow" min="0" max="100" value="68">
-      <div class="toggle-row" style="margin-top:12px">
-        <span class="chip on" id="roundChip">모서리 둥글게</span>
-        <span class="chip on" id="particleChip">반짝 파편</span>
+        <div style="height:12px"></div>
+        <label class="lbl">별 회전 속도</label>
+        <input type="range" id="float" min="0" max="100" value="45">
+        <div style="height:12px"></div>
+        <label class="lbl">반짝임 세기</label>
+        <input type="range" id="twinkle" min="0" max="100" value="60">
+        <div class="toggle-row" style="margin-top:12px">
+          <span class="chip on" id="roundChip">모서리 둥글게</span>
+          <span class="chip on" id="particleChip">반짝 파편</span>
+        </div>
+        <input type="file" id="overlayInput" accept="image/png,image/webp,image/*" multiple hidden>
       </div>
     </div>
   </div>
@@ -337,6 +377,11 @@
 
   // ---- state ----
   let img = null;
+  let mainImageX = 0.5, mainImageY = 0.43, mainImageWidthRatio = 0.52;
+  let mainImageMode = 'original';
+  let mainImageSpin = true;
+  let mainImageSpinSpeed = 28;
+  let mainImageSelected = false;
   let audioReady = false;
   let audioCtx, analyser, srcNode, freqData, timeData, streamDest;
   let running = false;
@@ -395,6 +440,14 @@
     float: document.getElementById('float'),
     twinkle: document.getElementById('twinkle'),
     backGlow: document.getElementById('backGlow'),
+    imgModeOriginalChip: document.getElementById('imgModeOriginalChip'),
+    imgModeDiscChip: document.getElementById('imgModeDiscChip'),
+    mainImageCenterBtn: document.getElementById('mainImageCenterBtn'),
+    imgSpinChip: document.getElementById('imgSpinChip'),
+    imgSpinSpeed: document.getElementById('imgSpinSpeed'),
+    overlayAnimSelect: document.getElementById('overlayAnimSelect'),
+    overlayAnimSpeed: document.getElementById('overlayAnimSpeed'),
+    selectedStickerHint: document.getElementById('selectedStickerHint'),
     titleInput: document.getElementById('titleInput'),
     titleColorInput: document.getElementById('titleColorInput'),
     titleFontSelect: document.getElementById('titleFontSelect'),
@@ -457,10 +510,12 @@
   function updateOverlayList(){
     if(!els.overlayList) return;
     if(!overlays.length){
-      els.overlayList.innerHTML = '<span class="muted">추가된 꾸미기 PNG 없음</span>';
+      els.overlayList.innerHTML = '<span class="muted">추가된 스티커 없음</span>';
+      updateStickerControlState();
       return;
     }
-    els.overlayList.innerHTML = overlays.map((item, idx)=>`<span>${idx+1}. ${escapeHtml(item.name)}</span>`).join('');
+    els.overlayList.innerHTML = overlays.map((item, idx)=>`<span>${item.id===selectedOverlayId?'▶ ':''}${idx+1}. ${escapeHtml(item.name)}</span>`).join('');
+    updateStickerControlState();
   }
   function loadOverlayFiles(files){
     if(!files?.length) return;
@@ -482,9 +537,12 @@
           x:0.5,
           y:0.5,
           widthRatio:defaultWidth,
-          rotation:0
+          rotation:0,
+          anim:'none',
+          animSpeed:35
         });
         selectedOverlayId = id;
+        mainImageSelected = false;
         updateOverlayList();
         if(!running) drawStatic();
       };
@@ -504,12 +562,27 @@
     const [item] = overlays.splice(idx,1);
     overlays.push(item);
   }
+  function updateStickerControlState(){
+    const item = getOverlayById(selectedOverlayId);
+    const disabled = !item;
+    if(els.overlayAnimSelect) els.overlayAnimSelect.disabled = disabled;
+    if(els.overlayAnimSpeed) els.overlayAnimSpeed.disabled = disabled;
+    if(item){
+      els.overlayAnimSelect.value = item.anim || 'none';
+      els.overlayAnimSpeed.value = Number(item.animSpeed ?? 35);
+      if(els.selectedStickerHint) els.selectedStickerHint.textContent = `선택 스티커: ${item.name} · 캔버스에서 드래그 / 크기 / 회전 / 삭제 가능`;
+    }else{
+      if(els.overlayAnimSelect) els.overlayAnimSelect.value = 'none';
+      if(els.overlayAnimSpeed) els.overlayAnimSpeed.value = 35;
+      if(els.selectedStickerHint) els.selectedStickerHint.textContent = '스티커를 선택하면 이동, 크기 조절, 회전, 삭제(X), 움직임 효과를 줄 수 있어요.';
+    }
+  }
 
   function maybeEnable(){
     const ok = img && audio.src;
     els.playBtn.disabled = !ok;
     els.recBtn.disabled = !ok;
-    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 별은 줄지어 돌고, 뒤 후광은 저음과 음량에 맞춰 크게 밝아졌다 돌아와요.');
+    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 썸네일은 직접 위치·크기 조절할 수 있고, 스티커도 효과를 줄 수 있어요.');
   }
 
   // ---------- dominant color ----------
@@ -596,20 +669,30 @@
     const c=Math.cos(rotation), s=Math.sin(rotation);
     return { x: dx*c + dy*s, y: -dx*s + dy*c };
   }
-  function getOverlayMetrics(item){
+  function getOverlayRenderState(item){
     const iw = item?.img?.naturalWidth || item?.img?.width || 1;
     const ih = item?.img?.naturalHeight || item?.img?.height || 1;
     const ratio = iw/ih || 1;
     const w = Math.max(26, item.widthRatio * W);
     const h = w / ratio;
-    return {cx:item.x*W, cy:item.y*H, w, h, ratio};
+    let cx = item.x * W;
+    let cy = item.y * H;
+    let rotation = item.rotation || 0;
+    const t = getRenderTime();
+    const anim = item.anim || 'none';
+    const speed = 0.5 + (Number(item.animSpeed||0)/100)*2.8;
+    const amp = 10 + (Number(item.animSpeed||0)/100)*18;
+    if(anim==='lr') cx += Math.sin(t*speed) * amp;
+    else if(anim==='ud') cy += Math.sin(t*speed) * amp;
+    else if(anim==='spin') rotation += t * speed;
+    return {cx, cy, w, h, ratio, rotation};
   }
   function getOverlayHandles(item){
-    const m = getOverlayMetrics(item);
+    const m = getOverlayRenderState(item);
     return {
-      delete: worldFromLocal(m.cx,m.cy,item.rotation,m.w/2+20,-m.h/2-20),
-      resize: worldFromLocal(m.cx,m.cy,item.rotation,m.w/2,m.h/2),
-      rotate: worldFromLocal(m.cx,m.cy,item.rotation,0,-m.h/2-30)
+      delete: worldFromLocal(m.cx,m.cy,m.rotation,m.w/2+20,-m.h/2-20),
+      resize: worldFromLocal(m.cx,m.cy,m.rotation,m.w/2,m.h/2),
+      rotate: worldFromLocal(m.cx,m.cy,m.rotation,0,-m.h/2-30)
     };
   }
   function hitTestOverlay(p, item){
@@ -617,8 +700,8 @@
     if(distance(p, handles.delete) <= 16) return {type:'delete', item};
     if(distance(p, handles.resize) <= 16) return {type:'resize', item};
     if(distance(p, handles.rotate) <= 16) return {type:'rotate', item};
-    const m = getOverlayMetrics(item);
-    const lp = localFromWorld(m.cx,m.cy,item.rotation,p.x,p.y);
+    const m = getOverlayRenderState(item);
+    const lp = localFromWorld(m.cx,m.cy,m.rotation,p.x,p.y);
     if(Math.abs(lp.x) <= m.w/2 && Math.abs(lp.y) <= m.h/2) return {type:'body', item};
     return null;
   }
@@ -629,12 +712,25 @@
     }
     return null;
   }
+  function hitTestMainImage(p){
+    const m = getMainImageMetrics();
+    if(!m) return null;
+    const resize = {x:m.x+m.w, y:m.y+m.h};
+    if(distance(p, resize) <= 16) return {type:'resize'};
+    if(mainImageMode==='disc'){
+      if(Math.hypot(p.x-m.cx,p.y-m.cy) <= m.w/2) return {type:'body'};
+    }else if(p.x>=m.x && p.x<=m.x+m.w && p.y>=m.y && p.y<=m.y+m.h){
+      return {type:'body'};
+    }
+    return null;
+  }
 
   canvas.addEventListener('pointerdown', e=>{
     const p=canvasPoint(e);
     const overlayHit = findOverlayHit(p);
     if(overlayHit){
       selectedOverlayId = overlayHit.item.id;
+      mainImageSelected = false;
       bringOverlayToFront(selectedOverlayId);
       const current = getOverlayById(selectedOverlayId);
       if(overlayHit.type==='delete'){
@@ -644,65 +740,103 @@
         return;
       }
       if(overlayHit.type==='body'){
-        activeDrag = {type:'overlay-move', id:current.id, offsetX:p.x-current.x*W, offsetY:p.y-current.y*H};
+        const m = getOverlayRenderState(current);
+        activeDrag = {type:'overlay-move', id:current.id, offsetX:p.x-m.cx, offsetY:p.y-m.cy};
         canvas.style.cursor='grabbing';
       }else if(overlayHit.type==='resize'){
         activeDrag = {type:'overlay-resize', id:current.id};
         canvas.style.cursor='nwse-resize';
       }else if(overlayHit.type==='rotate'){
-        const m = getOverlayMetrics(current);
+        const m = getOverlayRenderState(current);
         activeDrag = {type:'overlay-rotate', id:current.id, startRotation:current.rotation, startAngle:Math.atan2(p.y-m.cy,p.x-m.cx)};
         canvas.style.cursor='crosshair';
+      }
+      updateOverlayList();
+      canvas.setPointerCapture?.(e.pointerId);
+      if(!running) drawStatic();
+      e.preventDefault();
+      return;
+    }
+    const mainHit = hitTestMainImage(p);
+    if(mainHit){
+      selectedOverlayId = null;
+      mainImageSelected = true;
+      updateOverlayList();
+      if(mainHit.type==='body'){
+        activeDrag = {type:'main-move', offsetX:p.x-mainImageX*W, offsetY:p.y-mainImageY*H};
+        canvas.style.cursor='grabbing';
+      }else{
+        activeDrag = {type:'main-resize'};
+        canvas.style.cursor='nwse-resize';
       }
       canvas.setPointerCapture?.(e.pointerId);
       if(!running) drawStatic();
       e.preventDefault();
       return;
     }
-
     if(pointInTitle(p)){
       titleDragging=true;
       titleDragOffset.x=p.x-titleX*W;
       titleDragOffset.y=p.y-titleY*H;
+      mainImageSelected = false;
+      selectedOverlayId = null;
+      updateOverlayList();
       canvas.setPointerCapture?.(e.pointerId);
       canvas.style.cursor='grabbing';
       e.preventDefault();
       return;
     }
-
+    mainImageSelected = false;
     selectedOverlayId = null;
+    updateOverlayList();
     if(!running) drawStatic();
   });
-
   canvas.addEventListener('pointermove', e=>{
     const p=canvasPoint(e);
     if(activeDrag){
-      const item = getOverlayById(activeDrag.id);
-      if(!item) return;
-      if(activeDrag.type==='overlay-move'){
-        const m = getOverlayMetrics(item);
-        const nx = Math.max(m.w/2, Math.min(W - m.w/2, p.x - activeDrag.offsetX));
-        const ny = Math.max(m.h/2, Math.min(H - m.h/2, p.y - activeDrag.offsetY));
-        item.x = nx / W;
-        item.y = ny / H;
+      if(activeDrag.type==='main-move'){
+        const m = getMainImageMetrics();
+        if(m){
+          const nx = Math.max(m.w/2, Math.min(W-m.w/2, p.x-activeDrag.offsetX));
+          const ny = Math.max(m.h/2, Math.min(H-m.h/2, p.y-activeDrag.offsetY));
+          mainImageX = nx / W;
+          mainImageY = ny / H;
+        }
         canvas.style.cursor='grabbing';
-      }else if(activeDrag.type==='overlay-resize'){
-        const m = getOverlayMetrics(item);
-        const lp = localFromWorld(m.cx,m.cy,item.rotation,p.x,p.y);
-        const wantedW = Math.max(Math.abs(lp.x)*2, Math.abs(lp.y)*2*m.ratio, 28);
-        item.widthRatio = Math.max(0.03, Math.min(0.9, wantedW / W));
+      }else if(activeDrag.type==='main-resize'){
+        const m = getMainImageMetrics();
+        if(m){
+          const halfW = Math.max(40, Math.abs(p.x-m.cx));
+          mainImageWidthRatio = Math.max(0.08, Math.min(0.9, (halfW*2)/W));
+        }
         canvas.style.cursor='nwse-resize';
-      }else if(activeDrag.type==='overlay-rotate'){
-        const m = getOverlayMetrics(item);
-        const angle = Math.atan2(p.y-m.cy,p.x-m.cx);
-        item.rotation = activeDrag.startRotation + (angle - activeDrag.startAngle);
-        canvas.style.cursor='crosshair';
+      }else {
+        const item = getOverlayById(activeDrag.id);
+        if(!item) return;
+        if(activeDrag.type==='overlay-move'){
+          const m = getOverlayRenderState(item);
+          const nx = Math.max(m.w/2, Math.min(W-m.w/2, p.x-activeDrag.offsetX));
+          const ny = Math.max(m.h/2, Math.min(H-m.h/2, p.y-activeDrag.offsetY));
+          item.x = nx / W;
+          item.y = ny / H;
+          canvas.style.cursor='grabbing';
+        }else if(activeDrag.type==='overlay-resize'){
+          const m = getOverlayRenderState(item);
+          const lp = localFromWorld(m.cx,m.cy,m.rotation,p.x,p.y);
+          const wantedW = Math.max(Math.abs(lp.x)*2, Math.abs(lp.y)*2*m.ratio, 28);
+          item.widthRatio = Math.max(0.03, Math.min(0.9, wantedW / W));
+          canvas.style.cursor='nwse-resize';
+        }else if(activeDrag.type==='overlay-rotate'){
+          const m = getOverlayRenderState(item);
+          const angle = Math.atan2(p.y-m.cy,p.x-m.cx);
+          item.rotation = activeDrag.startRotation + (angle - activeDrag.startAngle);
+          canvas.style.cursor='crosshair';
+        }
       }
       if(!running) drawStatic();
       e.preventDefault();
       return;
     }
-
     if(titleDragging){
       const halfW=titleBounds ? titleBounds.width/2 : 0;
       const halfH=titleBounds ? titleBounds.height/2 : 0;
@@ -716,15 +850,18 @@
       e.preventDefault();
       return;
     }
-
-    const hoverOverlay = findOverlayHit(p);
-    if(hoverOverlay){
-      canvas.style.cursor = hoverOverlay.type==='body' ? 'grab' : (hoverOverlay.type==='rotate' ? 'crosshair' : 'pointer');
+    const overlayHover = findOverlayHit(p);
+    if(overlayHover){
+      canvas.style.cursor = overlayHover.type==='body' ? 'grab' : (overlayHover.type==='rotate' ? 'crosshair' : 'pointer');
+      return;
+    }
+    const mainHover = hitTestMainImage(p);
+    if(mainHover){
+      canvas.style.cursor = mainHover.type==='body' ? 'grab' : 'nwse-resize';
       return;
     }
     canvas.style.cursor=pointInTitle(p)?'grab':'default';
   });
-
   function endPointerInteraction(e){
     if(activeDrag){
       activeDrag = null;
@@ -753,6 +890,46 @@
   });
   els.titleCenterBtn.addEventListener('click', ()=>{
     titleX = 0.5;
+    if(!running) drawStatic();
+  });
+  els.imgModeOriginalChip.addEventListener('click', ()=>{
+    mainImageMode = 'original';
+    els.imgModeOriginalChip.classList.add('on');
+    els.imgModeDiscChip.classList.remove('on');
+    if(!running) drawStatic();
+  });
+  els.imgModeDiscChip.addEventListener('click', ()=>{
+    mainImageMode = 'disc';
+    els.imgModeDiscChip.classList.add('on');
+    els.imgModeOriginalChip.classList.remove('on');
+    if(!running) drawStatic();
+  });
+  els.mainImageCenterBtn.addEventListener('click', ()=>{
+    mainImageX = 0.5; mainImageY = 0.43;
+    mainImageSelected = true;
+    selectedOverlayId = null;
+    updateOverlayList();
+    if(!running) drawStatic();
+  });
+  els.imgSpinChip.addEventListener('click', function(){
+    mainImageSpin = !mainImageSpin;
+    this.classList.toggle('on', mainImageSpin);
+    if(!running) drawStatic();
+  });
+  els.imgSpinSpeed.addEventListener('input', e=>{
+    mainImageSpinSpeed = Number(e.target.value) || 0;
+    if(!running) drawStatic();
+  });
+  els.overlayAnimSelect.addEventListener('change', e=>{
+    const item = getOverlayById(selectedOverlayId);
+    if(!item) return;
+    item.anim = e.target.value || 'none';
+    if(!running) drawStatic();
+  });
+  els.overlayAnimSpeed.addEventListener('input', e=>{
+    const item = getOverlayById(selectedOverlayId);
+    if(!item) return;
+    item.animSpeed = Number(e.target.value) || 0;
     if(!running) drawStatic();
   });
   els.twinkle.addEventListener('input', ()=>{ if(!running) drawStatic(); });
@@ -825,6 +1002,71 @@
     ctx.drawImage(im,dx,dy,dw,dh);
     ctx.restore();
   }
+  function drawImageContain(im, x, y, w, h, radius){
+    ctx.save();
+    roundRectPath(x,y,w,h,radius);
+    ctx.clip();
+    ctx.drawImage(im,x,y,w,h);
+    ctx.restore();
+  }
+  function getRenderTime(){ return running ? audio.currentTime : 0; }
+  function getMainImageMetrics(){
+    if(!img) return null;
+    const ir = (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 1;
+    let w = Math.max(72, Math.min(W*0.88, mainImageWidthRatio * W));
+    let h;
+    if(mainImageMode==='disc') h = w;
+    else {
+      h = w / (ir || 1);
+      const maxH = H * 0.74;
+      if(h > maxH){ h = maxH; w = h * (ir || 1); }
+    }
+    const cx = mainImageX * W;
+    const cy = mainImageY * H;
+    const rotation = (mainImageMode==='disc' && mainImageSpin) ? getRenderTime() * (0.35 + (mainImageSpinSpeed/100)*3.4) : 0;
+    return { cx, cy, w, h, rotation, x:cx-w/2, y:cy-h/2, radius: rounded ? Math.min(w,h)*0.05 : 0 };
+  }
+  function drawMainImage(im, m){
+    if(!im || !m) return;
+    if(mainImageMode==='disc'){
+      ctx.save();
+      ctx.translate(m.cx,m.cy);
+      ctx.rotate(m.rotation);
+      ctx.beginPath(); ctx.arc(0,0,m.w/2,0,Math.PI*2); ctx.clip();
+      ctx.drawImage(im,-m.w/2,-m.h/2,m.w,m.h);
+      ctx.restore();
+      ctx.save();
+      ctx.translate(m.cx,m.cy);
+      ctx.strokeStyle='rgba(255,255,255,0.22)';
+      ctx.lineWidth=Math.max(2,m.w*0.01);
+      ctx.beginPath(); ctx.arc(0,0,m.w*0.47,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(8,8,10,0.85)';
+      ctx.beginPath(); ctx.arc(0,0,Math.max(10,m.w*0.04),0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }else{
+      drawImageContain(im, m.x, m.y, m.w, m.h, m.radius);
+    }
+  }
+  function drawMainImageSelection(m){
+    if(!m || !mainImageSelected || isRecording) return;
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.96)';
+    ctx.lineWidth=2;
+    ctx.setLineDash([10,6]);
+    if(mainImageMode==='disc'){
+      ctx.beginPath(); ctx.arc(m.cx,m.cy,m.w/2+2,0,Math.PI*2); ctx.stroke();
+    }else{
+      ctx.strokeRect(m.x,m.y,m.w,m.h);
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle='#8a52ff';
+    ctx.beginPath(); ctx.arc(m.x+m.w,m.y+m.h,11,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#111';
+    ctx.font=`700 ${Math.max(11,12*(H/1080))}px "Pretendard",sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('↘', m.x+m.w, m.y+m.h+0.5);
+    ctx.restore();
+  }
   function roundRectPath(x,y,w,h,r){
     r=Math.min(r,w/2,h/2);
     ctx.beginPath();
@@ -879,10 +1121,10 @@
   }
   function drawOverlayItem(item, editingDecorations){
     if(!item?.img) return;
-    const m = getOverlayMetrics(item);
+    const m = getOverlayRenderState(item);
     ctx.save();
     ctx.translate(m.cx,m.cy);
-    ctx.rotate(item.rotation);
+    ctx.rotate(m.rotation);
     ctx.drawImage(item.img,-m.w/2,-m.h/2,m.w,m.h);
     if(editingDecorations && selectedOverlayId===item.id){
       ctx.strokeStyle='rgba(255,255,255,0.95)';
@@ -1133,17 +1375,14 @@
       glowEnvelope=0;
     }
 
-    const cx = W/2, cy = H*0.43;   // 정중앙보다 살짝 위 (하단 자막 공간 확보)
-
-    // 카드는 고정, 대신 별이 이미지 테두리를 따라 회전
-    const maxW = W*0.60, maxH = H*0.60;
-    let ir = img ? img.naturalWidth/img.naturalHeight : 1;   // 이미지 가로/세로 비율
-    if(!Number.isFinite(ir) || ir<=0) ir = 1;
-    let cardW = maxW, cardH = cardW/ir;
-    if(cardH>maxH){ cardH=maxH; cardW=cardH*ir; }
-    const cardX = cx - cardW/2;
-    const cardY = cy - cardH/2;
-    const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
+    const mainMetrics = getMainImageMetrics();
+    const cx = mainMetrics ? mainMetrics.cx : W/2;
+    const cy = mainMetrics ? mainMetrics.cy : H*0.43;
+    const cardW = mainMetrics ? mainMetrics.w : W*0.50;
+    const cardH = mainMetrics ? mainMetrics.h : H*0.50;
+    const cardX = mainMetrics ? mainMetrics.x : cx-cardW/2;
+    const cardY = mainMetrics ? mainMetrics.y : cy-cardH/2;
+    const radius = mainMetrics ? mainMetrics.radius : 0;
 
     // 이미지 뒤 후광: 0이면 완전히 꺼지고, 낮은 값에서는 폭이 훨씬 작게 유지된다.
     const halo = Math.hypot(cardW,cardH)/2;
@@ -1220,31 +1459,38 @@
       }
     }
 
-    // the character card (독립 try/catch: 여기서 무슨 일이 나도 이미지는 계속 그려짐)
-    if(img && img.complete && img.naturalWidth){
+    // the character card / 메인 썸네일
+    if(img && img.complete && img.naturalWidth && mainMetrics){
       try{
-        // rim glow
         ctx.save();
         const rimGlowAmt = glowAmt;
         if(rimGlowAmt>0.0001){
           ctx.shadowColor = acc(rimGlowAmt*0.05 + pulse*0.82 + boom*0.22);
-          ctx.shadowBlur = rimGlowAmt*12 + pulse*220 + boom*120;
+          ctx.shadowBlur = rimGlowAmt*14 + pulse*240 + boom*140;
           ctx.fillStyle='#000';
-          roundRectPath(cardX,cardY,cardW,cardH,radius); ctx.fill();
+          if(mainImageMode==='disc'){
+            ctx.beginPath(); ctx.arc(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,0,Math.PI*2); ctx.fill();
+          }else{
+            roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius); ctx.fill();
+          }
         }
         ctx.restore();
 
-        drawImageCover(img, cardX, cardY, cardW, cardH, radius);
+        drawMainImage(img, mainMetrics);
 
-        // border stroke
         if(rimGlowAmt>0.0001){
           ctx.save();
-          roundRectPath(cardX,cardY,cardW,cardH,radius);
+          if(mainImageMode==='disc'){
+            ctx.beginPath(); ctx.arc(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,0,Math.PI*2);
+          }else{
+            roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius);
+          }
           ctx.strokeStyle = acc(rimGlowAmt*0.12 + pulse*0.74 + boom*0.12);
           ctx.lineWidth = 0.5 + rimGlowAmt*0.8 + pulse*8.6 + boom*2.6;
           ctx.stroke();
           ctx.restore();
         }
+        drawMainImageSelection(mainMetrics);
       }catch(e){ ctx.restore(); }
     }
 
@@ -1424,6 +1670,7 @@
   setAccentVar();
   refreshBgUI();
   updateOverlayList();
+  updateStickerControlState();
   applyCanvasResolution(getRecordPreset());
   drawStatic();
 })();
