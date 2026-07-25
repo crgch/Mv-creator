@@ -107,14 +107,14 @@
 <div class="wrap">
   <header>
     <h1>스챗 뮤직비디오 메이커</h1>
-    <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 음파 비주얼라이저</span>
+    <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 회전 별 글로우 비주얼</span>
   </header>
 
   <div class="stage-wrap">
     <canvas id="stage" width="1920" height="1080"></canvas>
     <div class="empty-hint" id="hint">
       <div class="big">캐릭터 이미지와 노래를 넣어주세요</div>
-      <div>이미지가 비트에 맞춰 둥둥 바운싱하고 음파 링이 퍼져요</div>
+      <div>이미지 테두리를 따라 네 꼭짓점 별이 계속 회전하고 반짝여요</div>
     </div>
   </div>
 
@@ -132,7 +132,7 @@
       <h3>2 · 스타일</h3>
       <div class="field">
         <label class="lbl">제목 / 캐릭터명 (선택)</label>
-        <input type="text" id="titleInput" placeholder="예: 지견우 — 배틀연애 OST" maxlength="40">
+        <input type="text" id="titleInput" placeholder="예: 지견우 — 회전 별 MV" maxlength="40">
       </div>
       <div style="height:12px"></div>
       <label class="lbl">글로우 색</label>
@@ -143,26 +143,17 @@
       </div>
 
       <div style="height:14px"></div>
-      <label class="lbl">이퀄라이저 세기</label>
-      <input type="range" id="intensity" min="0" max="100" value="60">
+      <label class="lbl">별 크기</label>
+      <input type="range" id="intensity" min="0" max="100" value="55">
       <div style="height:8px"></div>
-      <label class="lbl">이미지 바운싱 (BPM 박자 반응)</label>
-      <input type="range" id="float" min="0" max="100" value="55">
-      <div style="height:12px"></div>
-      <div class="row">
-        <div class="field" style="flex:0 0 110px">
-          <label class="lbl">BPM</label>
-          <input type="number" id="bpmInput" min="40" max="240" step="1" value="120">
-        </div>
-        <div class="field">
-          <label class="lbl">박자 시작점</label>
-          <button type="button" class="chip" id="syncBeatBtn">현재 위치를 1박으로 맞춤</button>
-          <div class="status" id="beatSyncStatus" style="margin-top:0">시작점 0.00초</div>
-        </div>
-      </div>
+      <label class="lbl">회전 속도</label>
+      <input type="range" id="float" min="0" max="100" value="45">
+      <div style="height:8px"></div>
+      <label class="lbl">반짝임 세기</label>
+      <input type="range" id="twinkle" min="0" max="100" value="60">
       <div class="toggle-row">
         <span class="chip on" id="roundChip">모서리 둥글게</span>
-        <span class="chip on" id="particleChip">비트 입자</span>
+        <span class="chip on" id="particleChip">반짝 파편</span>
       </div>
     </div>
 
@@ -249,9 +240,6 @@
   let bgImage = null;
   let bgDim = 35;
   let smBass = 0, smMid = 0, smEnergy = 0; // smoothed values
-  let beatOffset = 0;
-  const EQ_BARS = 56;
-  let eqSmooth = new Float32Array(EQ_BARS);
   let sparkles = [];
   let title = '';
 
@@ -269,10 +257,8 @@
     autoColorChip: document.getElementById('autoColorChip'),
     intensity: document.getElementById('intensity'),
     float: document.getElementById('float'),
+    twinkle: document.getElementById('twinkle'),
     titleInput: document.getElementById('titleInput'),
-    bpmInput: document.getElementById('bpmInput'),
-    syncBeatBtn: document.getElementById('syncBeatBtn'),
-    beatSyncStatus: document.getElementById('beatSyncStatus'),
   };
 
   function setStatus(html){ statusEl.innerHTML = html; }
@@ -307,8 +293,6 @@
   function loadAudio(file){
     els.audioName.textContent = file.name;
     audio.src = URL.createObjectURL(file);
-    beatOffset = 0;
-    els.beatSyncStatus.textContent = '시작점 0.00초';
     audioReady = false;
     audio.load();
     audio.addEventListener('loadedmetadata', ()=>{ audioReady = true; maybeEnable(); }, {once:true});
@@ -318,7 +302,7 @@
     const ok = img && audio.src;
     els.playBtn.disabled = !ok;
     els.recBtn.disabled = !ok;
-    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요.');
+    if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 이미지 테두리에 회전 별이 들어가요.');
   }
 
   // ---------- dominant color ----------
@@ -355,12 +339,7 @@
   document.getElementById('roundChip').addEventListener('click', function(){ rounded=!rounded; this.classList.toggle('on',rounded); if(!running) drawStatic(); });
   document.getElementById('particleChip').addEventListener('click', function(){ particles=!particles; this.classList.toggle('on',particles); });
   els.titleInput.addEventListener('input', e=>{ title=e.target.value; if(!running) drawStatic(); });
-  els.bpmInput.addEventListener('input', ()=>{ if(!running) drawStatic(); });
-  els.syncBeatBtn.addEventListener('click', ()=>{
-    beatOffset = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
-    els.beatSyncStatus.textContent = `시작점 ${beatOffset.toFixed(2)}초`;
-    setStatus('박자 시작점을 맞췄어요. 녹화할 때도 이 위치를 기준으로 BPM 바운스가 반복돼요.');
-  });
+  els.twinkle.addEventListener('input', ()=>{ if(!running) drawStatic(); });
 
   // background controls
   const bgColor2Wrap = document.getElementById('bgColor2Wrap');
@@ -482,30 +461,89 @@
     return sum/Math.max(1,b-a+1)/255;
   }
 
-  function drawBottomEqualizer(isStatic,intensity){
-    const totalW=W*0.72;
-    const gap=7;
-    const barW=(totalW-gap*(EQ_BARS-1))/EQ_BARS;
-    const startX=(W-totalW)/2;
-    const centerY=H*0.79;
-
+  function drawSparkleShape(x,y,size,spin=0,alpha=1){
+    const inner = size*0.28;
     ctx.save();
-    ctx.shadowColor=acc(0.55);
-    ctx.shadowBlur=16;
-    for(let i=0;i<EQ_BARS;i++){
-      const raw=isStatic ? 0.025 : logBandValue(i,EQ_BARS);
-      const follow=raw>eqSmooth[i] ? 0.52 : 0.12;
-      eqSmooth[i]+=(raw-eqSmooth[i])*follow;
-      const v=Math.pow(eqSmooth[i],1.28);
-      const h=6+v*150*intensity;
-      const x=startX+i*(barW+gap);
-      const y=centerY-h/2;
-      ctx.fillStyle=acc(0.26+Math.min(0.74,v*1.25));
-      roundRectPath(x,y,barW,h,Math.min(barW/2,6));
-      ctx.fill();
-    }
+    ctx.translate(x,y);
+    ctx.rotate(spin);
+    ctx.shadowColor = acc(0.55*alpha);
+    ctx.shadowBlur = size*1.4;
+    const grad = ctx.createRadialGradient(0,0,0,0,0,size);
+    grad.addColorStop(0,'rgba(255,255,255,' + (0.98*alpha) + ')');
+    grad.addColorStop(0.22, acc(0.95*alpha));
+    grad.addColorStop(0.7, acc(0.36*alpha));
+    grad.addColorStop(1, acc(0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0,-size);
+    ctx.lineTo(inner,-inner);
+    ctx.lineTo(size,0);
+    ctx.lineTo(inner,inner);
+    ctx.lineTo(0,size);
+    ctx.lineTo(-inner,inner);
+    ctx.lineTo(-size,0);
+    ctx.lineTo(-inner,-inner);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
+
+  function getOrbitPoint(t,x,y,w,h,pad){
+    const left=x-pad, top=y-pad, right=x+w+pad, bottom=y+h+pad;
+    const per=2*((right-left)+(bottom-top));
+    let d=((t%1)+1)%1 * per;
+    if(d < (right-left)) return {x:left+d, y:top};
+    d -= (right-left);
+    if(d < (bottom-top)) return {x:right, y:top+d};
+    d -= (bottom-top);
+    if(d < (right-left)) return {x:right-d, y:bottom};
+    d -= (right-left);
+    return {x:left, y:bottom-d};
+  }
+
+  function drawOrbitStars(cardX,cardY,cardW,cardH,isStatic){
+    const starSize = 12 + (els.intensity.value/100)*22;
+    const speed = 0.035 + (els.float.value/100)*0.18;
+    const twinkle = els.twinkle.value/100;
+    const time = isStatic ? 0 : audio.currentTime;
+    const orbitPad = Math.max(18, Math.min(cardW,cardH)*0.075);
+    const count = 7;
+
+    ctx.save();
+    ctx.strokeStyle = acc(0.12 + smEnergy*0.12);
+    ctx.lineWidth = 2.4;
+    ctx.shadowColor = acc(0.22);
+    ctx.shadowBlur = 14;
+    roundRectPath(cardX-orbitPad, cardY-orbitPad, cardW+orbitPad*2, cardH+orbitPad*2, Math.max(14, orbitPad*0.65));
+    ctx.stroke();
+    ctx.restore();
+
+    for(let i=0;i<count;i++){
+      const base = i / count;
+      const phase = (time * speed + base) % 1;
+      const p = getOrbitPoint(phase, cardX, cardY, cardW, cardH, orbitPad);
+      const pulse = 0.75 + 0.25*Math.sin(time*3.2 + i*1.3);
+      const react = 1 + smEnergy*0.25 + smBass*0.1;
+      const size = starSize * (0.72 + (i%3)*0.14) * (0.82 + twinkle*0.35*pulse) * react;
+      const alpha = Math.min(1, 0.5 + twinkle*0.35 + pulse*0.2 + smEnergy*0.18);
+      const spin = time*(0.55 + i*0.07) + i*0.8;
+      drawSparkleShape(p.x, p.y, size, spin, alpha);
+
+      if(particles && !isStatic && Math.random() < 0.03 + twinkle*0.04 + smEnergy*0.02){
+        sparkles.push({
+          x:p.x, y:p.y,
+          vx:(Math.random()-0.5)*(0.4+size*0.05),
+          vy:(Math.random()-0.5)*(0.4+size*0.05),
+          life:0.55 + Math.random()*0.35,
+          size:1.8 + Math.random()*2.5
+        });
+      }
+    }
+  }
+
+
+
+
 
 
   // ---------- render ----------
@@ -553,61 +591,34 @@
     smEnergy+= (energy- smEnergy)*0.20;
 
     const cx = W/2, cy = H*0.43;   // 정중앙보다 살짝 위 (하단 자막 공간 확보)
-    const intensity = els.intensity.value/100;
-    const pulseAmt = els.float.value/100;   // 바운싱 세기
 
-    // BPM 동기화: 주파수 크기가 아니라 audio.currentTime을 박자로 환산
-    let beatPulse=0;
-    if(!isStatic && audio && !audio.paused){
-      const bpm=Math.max(40,Math.min(240,Number(els.bpmInput.value)||120));
-      const beatDuration=60/bpm;
-      const elapsed=audio.currentTime-beatOffset;
-      const phase=((elapsed%beatDuration)+beatDuration)%beatDuration/beatDuration;
-      beatPulse=Math.exp(-phase*7.2);
-    }
-
-    // 카드는 넣은 이미지의 원본 비율을 그대로 따름 (가로/세로/정사각 자동, 크롭 없음)
-    const pulse = 1 + beatPulse*(0.018 + pulseAmt*0.065);
+    // 카드는 고정, 대신 별이 이미지 테두리를 따라 회전
     const maxW = W*0.60, maxH = H*0.60;
     let ir = img ? img.naturalWidth/img.naturalHeight : 1;   // 이미지 가로/세로 비율
     if(!Number.isFinite(ir) || ir<=0) ir = 1;
     let cardW = maxW, cardH = cardW/ir;
     if(cardH>maxH){ cardH=maxH; cardW=cardH*ir; }
-    cardW = Math.max(1, cardW*pulse); cardH = Math.max(1, cardH*pulse);
     const cardX = cx - cardW/2;
-    const lift = beatPulse*(8 + pulseAmt*34);
-    const cardY = cy - cardH/2 - lift;
+    const cardY = cy - cardH/2;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
 
     // breathing glow behind (이미지 크기 기준 halo)
     const halo = Math.hypot(cardW,cardH)/2;
-    const glowR = halo*(1.05 + smEnergy*0.5);
+    const glowR = halo*(1.04 + smEnergy*0.36);
     const g = ctx.createRadialGradient(cx, cy, halo*0.25, cx, cy, glowR);
-    g.addColorStop(0, acc(0.5*(0.4+smEnergy)));
-    g.addColorStop(0.5, acc(0.16*(0.4+smEnergy)));
+    g.addColorStop(0, acc(0.44*(0.42+smEnergy)));
+    g.addColorStop(0.5, acc(0.16*(0.5+smEnergy)));
     g.addColorStop(1, acc(0));
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.arc(cx,cy,glowR,0,Math.PI*2); ctx.fill();
 
-    // 표준 하단 막대형 이퀄라이저: 로그 주파수 분배 + 상승/하강 스무딩
-    if(analyser) drawBottomEqualizer(isStatic,intensity);
-
-    // sparkles on beat (원형으로 이미지 주변에서 바깥으로 튐)
-    if(particles && !isStatic && smBass>0.55 && Math.random()<smBass){
-      for(let k=0;k<3;k++){
-        const a = Math.random()*Math.PI*2;
-        const rr = halo*0.9;
-        sparkles.push({x:cx+Math.cos(a)*rr, y:cy+Math.sin(a)*rr,
-          vx:Math.cos(a)*(2+Math.random()*4), vy:Math.sin(a)*(2+Math.random()*4),
-          life:1});
-      }
-    }
+    // 이미지 테두리를 따라 4꼭지 별 회전
+    drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
     sparkles.forEach(s=>{
-      s.x+=s.vx; s.y+=s.vy; s.life-=0.02; s.vx*=0.98; s.vy*=0.98;
-      const r = 3*s.life;
-      if(r>0){
-        ctx.fillStyle=acc(Math.max(0,Math.min(1,s.life)));
-        ctx.beginPath(); ctx.arc(s.x,s.y,r,0,Math.PI*2); ctx.fill();
+      s.x+=s.vx; s.y+=s.vy; s.life-=0.018; s.vx*=0.98; s.vy*=0.98;
+      const sz = s.size*s.life;
+      if(sz>0.35){
+        drawSparkleShape(s.x, s.y, sz, audio.currentTime*2.2, Math.max(0,Math.min(1,s.life))*0.7);
       }
     });
     sparkles = sparkles.filter(s=>s.life>0);
@@ -618,7 +629,7 @@
         // rim glow
         ctx.save();
         ctx.shadowColor = acc(0.85);
-        ctx.shadowBlur = 40 + smBass*60;
+        ctx.shadowBlur = 34 + (smBass*20 + smEnergy*34);
         ctx.fillStyle='#000';
         roundRectPath(cardX,cardY,cardW,cardH,radius); ctx.fill();
         ctx.restore();
@@ -628,8 +639,8 @@
         // border stroke
         ctx.save();
         roundRectPath(cardX,cardY,cardW,cardH,radius);
-        ctx.strokeStyle = acc(0.6+smBass*0.4);
-        ctx.lineWidth = 3 + smBass*4;
+        ctx.strokeStyle = acc(0.52 + smEnergy*0.42);
+        ctx.lineWidth = 3 + smEnergy*3.2;
         ctx.stroke();
         ctx.restore();
       }catch(e){ ctx.restore(); }
