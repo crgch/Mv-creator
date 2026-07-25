@@ -547,15 +547,32 @@
       const spin = time*(0.65 + rank*0.25) + i*0.3;
       drawSparkleShape(p.x, p.y, size, spin, alpha);
 
-      // 앞별 주변에만 살짝 파편
-      if(particles && !isStatic && i < Math.max(2, Math.ceil(count*0.35)) && Math.random() < 0.02 + twinkle*0.035 + smEnergy*0.03){
-        sparkles.push({
-          x:p.x, y:p.y,
-          vx:(Math.random()-0.5)*(0.35+size*0.05),
-          vy:(Math.random()-0.5)*(0.35+size*0.05),
-          life:0.45 + Math.random()*0.28,
-          size:1.4 + Math.random()*2.2
-        });
+      // 앞쪽 별 주변에서 바깥 방향으로 뚜렷한 반짝 파편 생성
+      if(particles && !isStatic && i < Math.max(2, Math.ceil(count*0.40))){
+        const particleChance = 0.045 + twinkle*0.07 + glowEnvelope*0.14;
+        if(Math.random() < particleChance){
+          const dx=p.x-(cardX+cardW/2);
+          const dy=p.y-(cardY+cardH/2);
+          const len=Math.max(1,Math.hypot(dx,dy));
+          const nx=dx/len, ny=dy/len;
+          const burst = glowEnvelope>0.55 && Math.random()<0.35 ? 2 : 1;
+
+          for(let k=0;k<burst;k++){
+            const outward=1.7 + Math.random()*3.4 + glowEnvelope*3.2;
+            const side=(Math.random()-0.5)*(1.4 + twinkle*1.8);
+            sparkles.push({
+              x:p.x + nx*(3+Math.random()*7),
+              y:p.y + ny*(3+Math.random()*7),
+              vx:nx*outward - ny*side,
+              vy:ny*outward + nx*side,
+              life:0.82 + Math.random()*0.42,
+              size:5.5 + Math.random()*7.5,
+              spin:Math.random()*Math.PI*2,
+              spinVel:(Math.random()-0.5)*0.22
+            });
+          }
+          if(sparkles.length>180) sparkles.splice(0,sparkles.length-180);
+        }
       }
     }
   }
@@ -656,61 +673,82 @@
     const cardY = cy - cardH/2;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
 
-    // 이미지 뒤 후광: 킥/타격을 잡으면 확 퍼졌다가 감쇠하며 돌아온다.
+    // 이미지 뒤 후광: 거의 안 보이는 상태부터 팡팡 터지는 상태까지 범위를 크게 확장.
     const halo = Math.hypot(cardW,cardH)/2;
     const glowStrength = (Number(els.backGlow.value) || 0) / 100;
-    const pulse = isStatic ? 0.16 : Math.max(0,Math.min(1,glowEnvelope));
+    const pulseRaw = isStatic ? glowStrength*0.015 : Math.max(0,Math.min(1,glowEnvelope));
+    const pulse = Math.pow(pulseRaw, 0.82);          // 작은 차이도 더 눈에 띄게
+    const boom = Math.pow(pulseRaw, 1.18);           // 강한 킥에서 크게 터지는 용도
+    const baseFade = 0.004 + glowStrength*0.020;     // 최소 상태는 매우 약하게
 
-    // 한 장의 고정 원이 아니라 크기가 다른 후광층 3개가 같은 펄스로 움직인다.
-    const outerR = halo*(0.88 + glowStrength*0.10 + pulse*(0.72 + glowStrength*0.48));
-    const outer = ctx.createRadialGradient(cx,cy,halo*0.22,cx,cy,outerR);
-    outer.addColorStop(0,acc(0.05 + glowStrength*0.07 + pulse*0.12));
-    outer.addColorStop(0.34,acc(0.06 + glowStrength*0.12 + pulse*0.34));
-    outer.addColorStop(0.68,acc(0.02 + glowStrength*0.05 + pulse*0.24));
+    // 1) 가장 바깥쪽 넓은 오라: 킥에서 크게 퍼졌다가 돌아옴
+    const outerR = halo*(0.56 + glowStrength*0.10 + pulse*(0.65 + glowStrength*0.55) + boom*(0.65 + glowStrength*0.95));
+    const outer = ctx.createRadialGradient(cx,cy,halo*0.16,cx,cy,outerR);
+    outer.addColorStop(0,acc(baseFade + pulse*0.06));
+    outer.addColorStop(0.18,acc(baseFade + glowStrength*0.05 + pulse*0.12 + boom*0.10));
+    outer.addColorStop(0.45,acc(baseFade + glowStrength*0.08 + pulse*0.26 + boom*0.22));
+    outer.addColorStop(0.72,acc(baseFade + pulse*0.14 + boom*0.12));
     outer.addColorStop(1,acc(0));
     ctx.fillStyle=outer;
     ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
 
-    const midR = halo*(0.72 + pulse*(0.38 + glowStrength*0.20));
-    const midGlow = ctx.createRadialGradient(cx,cy,halo*0.30,cx,cy,midR);
-    midGlow.addColorStop(0,acc(0.05 + pulse*0.18));
-    midGlow.addColorStop(0.58,acc(0.04 + pulse*0.30));
+    // 2) 중간층 오라: 전체 형태를 채우는 메인 후광
+    const midR = halo*(0.44 + glowStrength*0.10 + pulse*(0.34 + glowStrength*0.24) + boom*(0.24 + glowStrength*0.28));
+    const midGlow = ctx.createRadialGradient(cx,cy,halo*0.10,cx,cy,midR);
+    midGlow.addColorStop(0,acc(baseFade + glowStrength*0.02 + pulse*0.10));
+    midGlow.addColorStop(0.34,acc(baseFade + pulse*0.20 + boom*0.12));
+    midGlow.addColorStop(0.68,acc(baseFade + pulse*0.28 + boom*0.24));
     midGlow.addColorStop(1,acc(0));
     ctx.fillStyle=midGlow;
     ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
 
-    // 펄스 정점에 짧게 생기는 선명한 광륜. 퍼졌다가 사라지는 움직임을 눈에 보이게 만든다.
-    if(pulse>0.035){
-      const ringR=halo*(0.57 + pulse*0.60);
-      ctx.save();
-      ctx.strokeStyle=acc(Math.min(0.80,pulse*0.78));
-      ctx.lineWidth=3 + pulse*11;
-      ctx.shadowColor=acc(Math.min(0.95,pulse));
-      ctx.shadowBlur=18 + pulse*70;
-      ctx.beginPath();
-      ctx.arc(cx,cy,ringR,0,Math.PI*2);
-      ctx.stroke();
-      ctx.restore();
-    }
+    // 3) 안쪽 코어 글로우: 킥 때 중심부가 확 밝아짐 (바깥 링은 제거)
+    const coreR = halo*(0.24 + glowStrength*0.06 + pulse*(0.14 + glowStrength*0.12));
+    const core = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
+    core.addColorStop(0,acc(baseFade + glowStrength*0.06 + pulse*0.26 + boom*0.18));
+    core.addColorStop(0.48,acc(baseFade + pulse*0.18 + boom*0.12));
+    core.addColorStop(1,acc(0));
+    ctx.fillStyle=core;
+    ctx.beginPath(); ctx.arc(cx,cy,coreR,0,Math.PI*2); ctx.fill();
 
     // 이미지 테두리를 따라 4꼭지 별 회전
     drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
-    sparkles.forEach(s=>{
-      s.x+=s.vx; s.y+=s.vy; s.life-=0.018; s.vx*=0.98; s.vy*=0.98;
-      const sz = s.size*s.life;
-      if(sz>0.35){
-        drawSparkleShape(s.x, s.y, sz, audio.currentTime*2.2, Math.max(0,Math.min(1,s.life))*0.7);
+
+    // 별 개수가 0이어도 "반짝 파편"은 독립적으로 작동한다.
+    if(particles && !isStatic && Number(els.starCount.value)===0){
+      const chance=0.018 + glowEnvelope*0.18 + (els.twinkle.value/100)*0.025;
+      if(Math.random()<chance){
+        const orbitPad=Math.max(18,Math.min(cardW,cardH)*0.075);
+        const phase=Math.random();
+        const p=getOrbitPoint(phase,cardX,cardY,cardW,cardH,orbitPad);
+        const dx=p.x-cx, dy=p.y-cy;
+        const len=Math.max(1,Math.hypot(dx,dy));
+        const nx=dx/len, ny=dy/len;
+        const burst=glowEnvelope>0.55 ? 2 : 1;
+        for(let k=0;k<burst;k++){
+          const outward=1.8+Math.random()*3.6+glowEnvelope*3.5;
+          const side=(Math.random()-0.5)*2.4;
+          sparkles.push({
+            x:p.x+nx*(3+Math.random()*7),
+            y:p.y+ny*(3+Math.random()*7),
+            vx:nx*outward-ny*side,
+            vy:ny*outward+nx*side,
+            life:0.82+Math.random()*0.42,
+            size:5.5+Math.random()*7.5,
+            spin:Math.random()*Math.PI*2,
+            spinVel:(Math.random()-0.5)*0.22
+          });
+        }
       }
-    });
-    sparkles = sparkles.filter(s=>s.life>0);
+    }
 
     // the character card (독립 try/catch: 여기서 무슨 일이 나도 이미지는 계속 그려짐)
     if(img && img.complete && img.naturalWidth){
       try{
         // rim glow
         ctx.save();
-        ctx.shadowColor = acc(0.18 + glowStrength*0.16 + pulse*0.66);
-        ctx.shadowBlur = 14 + glowStrength*18 + pulse*190;
+        ctx.shadowColor = acc(0.05 + glowStrength*0.12 + pulse*0.82 + boom*0.22);
+        ctx.shadowBlur = 4 + glowStrength*14 + pulse*260 + boom*150;
         ctx.fillStyle='#000';
         roundRectPath(cardX,cardY,cardW,cardH,radius); ctx.fill();
         ctx.restore();
@@ -720,12 +758,26 @@
         // border stroke
         ctx.save();
         roundRectPath(cardX,cardY,cardW,cardH,radius);
-        ctx.strokeStyle = acc(0.28 + glowStrength*0.14 + pulse*0.58);
-        ctx.lineWidth = 2.2 + pulse*7.5;
+        ctx.strokeStyle = acc(0.12 + glowStrength*0.10 + pulse*0.74 + boom*0.12);
+        ctx.lineWidth = 1.2 + pulse*9.5 + boom*3.0;
         ctx.stroke();
         ctx.restore();
       }catch(e){ ctx.restore(); }
     }
+
+    // 파편은 이미지보다 나중에 그려 가려지지 않게 한다.
+    sparkles.forEach(s=>{
+      s.x+=s.vx; s.y+=s.vy;
+      s.life-=0.014;
+      s.vx*=0.972; s.vy*=0.972;
+      s.spin=(s.spin||0)+(s.spinVel||0);
+      const fade=Math.max(0,Math.min(1,s.life));
+      const sz=s.size*(0.35+fade*0.65);
+      if(sz>0.8){
+        drawSparkleShape(s.x,s.y,sz,s.spin,fade*0.95);
+      }
+    });
+    sparkles=sparkles.filter(s=>s.life>0);
 
     // title
     if(title){
