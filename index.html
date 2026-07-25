@@ -55,9 +55,9 @@
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
   label.lbl{font-size:11px;color:var(--ink-dim);letter-spacing:.04em}
-  input[type=text]{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);
+  input[type=text],input[type=number]{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);
     border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit}
-  input[type=text]:focus{outline:none;border-color:var(--accent)}
+  input[type=text]:focus,input[type=number]:focus{outline:none;border-color:var(--accent)}
   select{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);border-radius:8px;
     padding:9px 11px;font-size:14px;font-family:inherit}
   input[type=range]{width:100%;accent-color:var(--accent)}
@@ -143,11 +143,23 @@
       </div>
 
       <div style="height:14px"></div>
-      <label class="lbl">음파 링 세기</label>
+      <label class="lbl">이퀄라이저 세기</label>
       <input type="range" id="intensity" min="0" max="100" value="60">
       <div style="height:8px"></div>
-      <label class="lbl">이미지 바운싱 (비트 반응)</label>
+      <label class="lbl">이미지 바운싱 (BPM 박자 반응)</label>
       <input type="range" id="float" min="0" max="100" value="55">
+      <div style="height:12px"></div>
+      <div class="row">
+        <div class="field" style="flex:0 0 110px">
+          <label class="lbl">BPM</label>
+          <input type="number" id="bpmInput" min="40" max="240" step="1" value="120">
+        </div>
+        <div class="field">
+          <label class="lbl">박자 시작점</label>
+          <button type="button" class="chip" id="syncBeatBtn">현재 위치를 1박으로 맞춤</button>
+          <div class="status" id="beatSyncStatus" style="margin-top:0">시작점 0.00초</div>
+        </div>
+      </div>
       <div class="toggle-row">
         <span class="chip on" id="roundChip">모서리 둥글게</span>
         <span class="chip on" id="particleChip">비트 입자</span>
@@ -237,7 +249,9 @@
   let bgImage = null;
   let bgDim = 35;
   let smBass = 0, smMid = 0, smEnergy = 0; // smoothed values
-  let bounceVel = 0, bouncePos = 0, bassAvg = 0, lastBeatT = -1; // 드럼 비트 바운스
+  let beatOffset = 0;
+  const EQ_BARS = 56;
+  let eqSmooth = new Float32Array(EQ_BARS);
   let sparkles = [];
   let title = '';
 
@@ -256,6 +270,9 @@
     intensity: document.getElementById('intensity'),
     float: document.getElementById('float'),
     titleInput: document.getElementById('titleInput'),
+    bpmInput: document.getElementById('bpmInput'),
+    syncBeatBtn: document.getElementById('syncBeatBtn'),
+    beatSyncStatus: document.getElementById('beatSyncStatus'),
   };
 
   function setStatus(html){ statusEl.innerHTML = html; }
@@ -290,6 +307,8 @@
   function loadAudio(file){
     els.audioName.textContent = file.name;
     audio.src = URL.createObjectURL(file);
+    beatOffset = 0;
+    els.beatSyncStatus.textContent = '시작점 0.00초';
     audioReady = false;
     audio.load();
     audio.addEventListener('loadedmetadata', ()=>{ audioReady = true; maybeEnable(); }, {once:true});
@@ -336,6 +355,12 @@
   document.getElementById('roundChip').addEventListener('click', function(){ rounded=!rounded; this.classList.toggle('on',rounded); if(!running) drawStatic(); });
   document.getElementById('particleChip').addEventListener('click', function(){ particles=!particles; this.classList.toggle('on',particles); });
   els.titleInput.addEventListener('input', e=>{ title=e.target.value; if(!running) drawStatic(); });
+  els.bpmInput.addEventListener('input', ()=>{ if(!running) drawStatic(); });
+  els.syncBeatBtn.addEventListener('click', ()=>{
+    beatOffset = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+    els.beatSyncStatus.textContent = `시작점 ${beatOffset.toFixed(2)}초`;
+    setStatus('박자 시작점을 맞췄어요. 녹화할 때도 이 위치를 기준으로 BPM 바운스가 반복돼요.');
+  });
 
   // background controls
   const bgColor2Wrap = document.getElementById('bgColor2Wrap');
@@ -432,6 +457,56 @@
   }
   const acc = (a)=>`rgba(${accent.r},${accent.g},${accent.b},${a})`;
 
+  function freqToBin(freq){
+    if(!audioCtx || !analyser || !freqData) return 0;
+    const hzPerBin = audioCtx.sampleRate / analyser.fftSize;
+    return Math.max(0, Math.min(freqData.length-1, Math.round(freq/hzPerBin)));
+  }
+
+  function averageFrequency(minHz,maxHz){
+    if(!freqData || !audioCtx || !analyser) return 0;
+    const a=freqToBin(minHz), b=Math.max(a,freqToBin(maxHz));
+    let sum=0;
+    for(let i=a;i<=b;i++) sum+=freqData[i];
+    return sum/Math.max(1,b-a+1)/255;
+  }
+
+  function logBandValue(index,count,minHz=45,maxHz=16000){
+    if(!freqData || !audioCtx || !analyser) return 0;
+    const ratio=maxHz/minHz;
+    const f0=minHz*Math.pow(ratio,index/count);
+    const f1=minHz*Math.pow(ratio,(index+1)/count);
+    const a=freqToBin(f0), b=Math.max(a,freqToBin(f1));
+    let sum=0;
+    for(let i=a;i<=b;i++) sum+=freqData[i];
+    return sum/Math.max(1,b-a+1)/255;
+  }
+
+  function drawBottomEqualizer(isStatic,intensity){
+    const totalW=W*0.72;
+    const gap=7;
+    const barW=(totalW-gap*(EQ_BARS-1))/EQ_BARS;
+    const startX=(W-totalW)/2;
+    const centerY=H*0.79;
+
+    ctx.save();
+    ctx.shadowColor=acc(0.55);
+    ctx.shadowBlur=16;
+    for(let i=0;i<EQ_BARS;i++){
+      const raw=isStatic ? 0.025 : logBandValue(i,EQ_BARS);
+      const follow=raw>eqSmooth[i] ? 0.52 : 0.12;
+      eqSmooth[i]+=(raw-eqSmooth[i])*follow;
+      const v=Math.pow(eqSmooth[i],1.28);
+      const h=6+v*150*intensity;
+      const x=startX+i*(barW+gap);
+      const y=centerY-h/2;
+      ctx.fillStyle=acc(0.26+Math.min(0.74,v*1.25));
+      roundRectPath(x,y,barW,h,Math.min(barW/2,6));
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
 
   // ---------- render ----------
   function drawStatic(){
@@ -462,20 +537,15 @@
     vg.addColorStop(1,'rgba(0,0,0,0.20)');
     ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 
-    // audio analysis
+    // audio analysis: 실제 주파수(Hz) 범위로 저음/중음을 나눔
     let bass=0, mid=0, energy=0;
     if(!isStatic && analyser){
       analyser.getByteFrequencyData(freqData);
-      const n = freqData.length;
-      let bsum=0,bcount=0,msum=0,mcount=0,esum=0;
-      for(let i=0;i<n;i++){
-        esum+=freqData[i];
-        if(i<n*0.08){ bsum+=freqData[i]; bcount++; }
-        else if(i<n*0.35){ msum+=freqData[i]; mcount++; }
-      }
-      bass = (bsum/bcount)/255;
-      mid = (msum/mcount)/255;
-      energy = (esum/n)/255;
+      bass = averageFrequency(45,180);
+      mid = averageFrequency(180,2400);
+      let esum=0;
+      for(let i=0;i<freqData.length;i++) esum+=freqData[i];
+      energy=(esum/freqData.length)/255;
     }
     // smoothing
     smBass  += (bass  - smBass )*0.28;
@@ -486,21 +556,18 @@
     const intensity = els.intensity.value/100;
     const pulseAmt = els.float.value/100;   // 바운싱 세기
 
-    // 드럼 비트 감지 → 스프링 임펄스 (음파 추종이 아니라 킥에 맞춰 둥둥)
-    if(!isStatic){
-      bassAvg += (bass - bassAvg)*0.045;               // 적응형 기준선
-      const now = audio ? audio.currentTime : 0;
-      if(bass > bassAvg*1.32 + 0.05 && bass > 0.16 && (now - lastBeatT) > 0.19){
-        lastBeatT = now;
-        bounceVel += 0.42 + bass*0.5;                  // 킥 세기만큼 튐
-      }
-      bounceVel += -0.16*bouncePos;   // 스프링 복원
-      bounceVel *= 0.74;              // 감쇠 → 둥둥 하고 잦아듦
-      bouncePos += bounceVel;
-    } else { bounceVel=0; bouncePos=0; }
+    // BPM 동기화: 주파수 크기가 아니라 audio.currentTime을 박자로 환산
+    let beatPulse=0;
+    if(!isStatic && audio && !audio.paused){
+      const bpm=Math.max(40,Math.min(240,Number(els.bpmInput.value)||120));
+      const beatDuration=60/bpm;
+      const elapsed=audio.currentTime-beatOffset;
+      const phase=((elapsed%beatDuration)+beatDuration)%beatDuration/beatDuration;
+      beatPulse=Math.exp(-phase*7.2);
+    }
 
     // 카드는 넣은 이미지의 원본 비율을 그대로 따름 (가로/세로/정사각 자동, 크롭 없음)
-    const pulse = 1 + bouncePos*(0.10 + pulseAmt*0.38);   // 비트 스프링으로 스케일
+    const pulse = 1 + beatPulse*(0.018 + pulseAmt*0.065);
     const maxW = W*0.60, maxH = H*0.60;
     let ir = img ? img.naturalWidth/img.naturalHeight : 1;   // 이미지 가로/세로 비율
     if(!Number.isFinite(ir) || ir<=0) ir = 1;
@@ -508,9 +575,9 @@
     if(cardH>maxH){ cardH=maxH; cardW=cardH*ir; }
     cardW = Math.max(1, cardW*pulse); cardH = Math.max(1, cardH*pulse);
     const cardX = cx - cardW/2;
-    const cardY = cy - cardH/2;
+    const lift = beatPulse*(8 + pulseAmt*34);
+    const cardY = cy - cardH/2 - lift;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
-    const ringR = Math.max(1, Math.min(cardW,cardH)*0.44);   // 이미지 안쪽에서 시작하는 원형 링
 
     // breathing glow behind (이미지 크기 기준 halo)
     const halo = Math.hypot(cardW,cardH)/2;
@@ -522,31 +589,8 @@
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.arc(cx,cy,glowR,0,Math.PI*2); ctx.fill();
 
-    // 음파 링: 원형. 이미지 안쪽(ringR)에서 시작해 바깥으로 뻗음 → 카드가 안쪽 절반을 가려 테두리 뒤에서 나오는 halo처럼 보임
-    if(analyser){
-      const bars = 96;
-      const step = Math.max(1, Math.floor(freqData.length*0.55/(bars/2)));
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.lineCap='round';
-      for(let i=0;i<bars;i++){
-        const bin = (i < bars/2 ? i : (bars-1-i)) * step;  // 좌우 대칭
-        const raw = isStatic ? 0.04 : (freqData[bin]/255);
-        const v = Math.pow(raw, 1.4);
-        const ang = (i/bars)*Math.PI*2 - Math.PI/2;
-        const len = 14 + v*220*intensity + smEnergy*24*intensity;
-        const r0 = ringR;
-        const r1 = ringR + len;
-        const c = Math.cos(ang), s = Math.sin(ang);
-        ctx.strokeStyle = acc(0.30 + raw*0.70);
-        ctx.lineWidth = 4 + raw*7;
-        ctx.beginPath();
-        ctx.moveTo(c*r0, s*r0);
-        ctx.lineTo(c*r1, s*r1);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
+    // 표준 하단 막대형 이퀄라이저: 로그 주파수 분배 + 상승/하강 스무딩
+    if(analyser) drawBottomEqualizer(isStatic,intensity);
 
     // sparkles on beat (원형으로 이미지 주변에서 바깥으로 튐)
     if(particles && !isStatic && smBass>0.55 && Math.random()<smBass){
