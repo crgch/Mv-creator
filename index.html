@@ -673,43 +673,47 @@
     const cardY = cy - cardH/2;
     const radius = rounded ? Math.min(cardW,cardH)*0.05 : 0;
 
-    // 이미지 뒤 후광: 거의 안 보이는 상태부터 팡팡 터지는 상태까지 범위를 크게 확장.
+    // 이미지 뒤 후광: 0이면 완전히 꺼지고, 낮은 값에서는 폭이 훨씬 작게 유지된다.
     const halo = Math.hypot(cardW,cardH)/2;
     const glowStrength = (Number(els.backGlow.value) || 0) / 100;
-    const pulseRaw = isStatic ? glowStrength*0.015 : Math.max(0,Math.min(1,glowEnvelope));
-    const pulse = Math.pow(pulseRaw, 0.82);          // 작은 차이도 더 눈에 띄게
-    const boom = Math.pow(pulseRaw, 1.18);           // 강한 킥에서 크게 터지는 용도
-    const baseFade = 0.004 + glowStrength*0.020;     // 최소 상태는 매우 약하게
+    const glowAmt = Math.pow(glowStrength, 1.55);    // 낮은 값은 더 세게 눌러서 최소 폭 축소
+    const pulseRaw = isStatic ? 0 : Math.max(0,Math.min(1,glowEnvelope));
+    const pulse = Math.pow(pulseRaw, 0.86);
+    const boom = Math.pow(pulseRaw, 1.25);
 
-    // 1) 가장 바깥쪽 넓은 오라: 킥에서 크게 퍼졌다가 돌아옴
-    const outerR = halo*(0.56 + glowStrength*0.10 + pulse*(0.65 + glowStrength*0.55) + boom*(0.65 + glowStrength*0.95));
-    const outer = ctx.createRadialGradient(cx,cy,halo*0.16,cx,cy,outerR);
-    outer.addColorStop(0,acc(baseFade + pulse*0.06));
-    outer.addColorStop(0.18,acc(baseFade + glowStrength*0.05 + pulse*0.12 + boom*0.10));
-    outer.addColorStop(0.45,acc(baseFade + glowStrength*0.08 + pulse*0.26 + boom*0.22));
-    outer.addColorStop(0.72,acc(baseFade + pulse*0.14 + boom*0.12));
-    outer.addColorStop(1,acc(0));
-    ctx.fillStyle=outer;
-    ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
+    if(glowStrength > 0.001){
+      const baseFade = glowAmt * 0.010;              // 낮은 설정에서는 거의 안 보이게
 
-    // 2) 중간층 오라: 전체 형태를 채우는 메인 후광
-    const midR = halo*(0.44 + glowStrength*0.10 + pulse*(0.34 + glowStrength*0.24) + boom*(0.24 + glowStrength*0.28));
-    const midGlow = ctx.createRadialGradient(cx,cy,halo*0.10,cx,cy,midR);
-    midGlow.addColorStop(0,acc(baseFade + glowStrength*0.02 + pulse*0.10));
-    midGlow.addColorStop(0.34,acc(baseFade + pulse*0.20 + boom*0.12));
-    midGlow.addColorStop(0.68,acc(baseFade + pulse*0.28 + boom*0.24));
-    midGlow.addColorStop(1,acc(0));
-    ctx.fillStyle=midGlow;
-    ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
+      // 1) 가장 바깥쪽 넓은 오라
+      const outerR = halo*(0.16 + glowAmt*0.16 + pulse*(0.14 + glowAmt*0.34) + boom*(0.18 + glowAmt*0.52));
+      const outer = ctx.createRadialGradient(cx,cy,halo*0.08,cx,cy,outerR);
+      outer.addColorStop(0,acc(baseFade + glowAmt*0.010 + pulse*0.025));
+      outer.addColorStop(0.22,acc(baseFade + glowAmt*0.020 + pulse*0.055 + boom*0.045));
+      outer.addColorStop(0.52,acc(baseFade + glowAmt*0.038 + pulse*0.12 + boom*0.11));
+      outer.addColorStop(0.80,acc(baseFade + pulse*0.055 + boom*0.045));
+      outer.addColorStop(1,acc(0));
+      ctx.fillStyle=outer;
+      ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
 
-    // 3) 안쪽 코어 글로우: 킥 때 중심부가 확 밝아짐 (바깥 링은 제거)
-    const coreR = halo*(0.24 + glowStrength*0.06 + pulse*(0.14 + glowStrength*0.12));
-    const core = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
-    core.addColorStop(0,acc(baseFade + glowStrength*0.06 + pulse*0.26 + boom*0.18));
-    core.addColorStop(0.48,acc(baseFade + pulse*0.18 + boom*0.12));
-    core.addColorStop(1,acc(0));
-    ctx.fillStyle=core;
-    ctx.beginPath(); ctx.arc(cx,cy,coreR,0,Math.PI*2); ctx.fill();
+      // 2) 중간층 메인 후광
+      const midR = halo*(0.11 + glowAmt*0.13 + pulse*(0.10 + glowAmt*0.22) + boom*(0.10 + glowAmt*0.22));
+      const midGlow = ctx.createRadialGradient(cx,cy,halo*0.04,cx,cy,midR);
+      midGlow.addColorStop(0,acc(baseFade + glowAmt*0.016 + pulse*0.040));
+      midGlow.addColorStop(0.36,acc(baseFade + pulse*0.095 + boom*0.055));
+      midGlow.addColorStop(0.70,acc(baseFade + pulse*0.13 + boom*0.10));
+      midGlow.addColorStop(1,acc(0));
+      ctx.fillStyle=midGlow;
+      ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
+
+      // 3) 안쪽 코어 글로우
+      const coreR = halo*(0.045 + glowAmt*0.09 + pulse*(0.055 + glowAmt*0.09));
+      const core = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
+      core.addColorStop(0,acc(baseFade + glowAmt*0.030 + pulse*0.11 + boom*0.08));
+      core.addColorStop(0.45,acc(baseFade + pulse*0.075 + boom*0.05));
+      core.addColorStop(1,acc(0));
+      ctx.fillStyle=core;
+      ctx.beginPath(); ctx.arc(cx,cy,coreR,0,Math.PI*2); ctx.fill();
+    }
 
     // 이미지 테두리를 따라 4꼭지 별 회전
     drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
@@ -747,8 +751,9 @@
       try{
         // rim glow
         ctx.save();
-        ctx.shadowColor = acc(0.05 + glowStrength*0.12 + pulse*0.82 + boom*0.22);
-        ctx.shadowBlur = 4 + glowStrength*14 + pulse*260 + boom*150;
+        const rimGlowAmt = Math.pow(glowStrength, 1.55);
+        ctx.shadowColor = acc(rimGlowAmt*0.04 + pulse*0.82 + boom*0.22);
+        ctx.shadowBlur = rimGlowAmt*10 + pulse*220 + boom*120;
         ctx.fillStyle='#000';
         roundRectPath(cardX,cardY,cardW,cardH,radius); ctx.fill();
         ctx.restore();
@@ -758,8 +763,8 @@
         // border stroke
         ctx.save();
         roundRectPath(cardX,cardY,cardW,cardH,radius);
-        ctx.strokeStyle = acc(0.12 + glowStrength*0.10 + pulse*0.74 + boom*0.12);
-        ctx.lineWidth = 1.2 + pulse*9.5 + boom*3.0;
+        ctx.strokeStyle = acc(0.08 + rimGlowAmt*0.06 + pulse*0.74 + boom*0.12);
+        ctx.lineWidth = 1.0 + pulse*8.6 + boom*2.6;
         ctx.stroke();
         ctx.restore();
       }catch(e){ ctx.restore(); }
