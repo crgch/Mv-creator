@@ -126,6 +126,9 @@
   .time-display b{font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
   .next-lyric{min-width:190px;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
   .timeline-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .timeline-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .timeline-title-row h3{margin:0}
+  .subtitle-download{padding:9px 14px !important;font-size:12px !important;white-space:nowrap}
   .cue-table-wrap{overflow:auto;border:1px solid var(--panel-line);border-radius:10px}
   .cue-table{width:100%;border-collapse:collapse;min-width:680px;font-size:12px}
   .cue-table th,.cue-table td{padding:9px 10px;border-bottom:1px solid var(--panel-line);text-align:left;vertical-align:middle}
@@ -458,20 +461,26 @@
       <input type="file" id="lyricFileInput" accept=".txt,.lrc,text/plain" hidden>
       <div style="height:12px"></div>
       <div class="field">
-        <label class="lbl">한 가사 = 한 칸. 외국어 노래는 원문 아래 줄에 번역을 쓰고, 가사끼리는 빈 줄로 구분해요.</label>
+        <label class="lbl">가사 형식</label>
+        <div class="toggle-row" style="margin-top:0" role="radiogroup" aria-label="가사 형식 선택">
+          <button type="button" class="chip on" id="lyricModeSingleChip" data-lyric-mode="single" role="radio" aria-checked="true">한줄가사 (기본)</button>
+          <button type="button" class="chip" id="lyricModeDoubleChip" data-lyric-mode="double" role="radio" aria-checked="false">두줄가사 (원어가사+번역가사)</button>
+        </div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="field">
+        <label class="lbl" id="lyricFormatHint">한 줄마다 하나의 가사로 적용해요. 빈 줄은 자동으로 건너뛰어요.</label>
         <textarea id="lyricsInput" placeholder="Kimi no koe ga kikoeru
-너의 목소리가 들려
-
 Yoru wo koete
-밤을 넘어서
+Hikari no saki e
 
-(번역이 없으면 한 줄만 쓰고 빈 줄로 구분하면 돼요)"></textarea>
+(한 줄마다 다음 가사로 적용돼요)"></textarea>
       </div>
       <div class="btns">
         <button type="button" class="act ghost" id="applyLyricsBtn">가사 반영</button>
         <button type="button" class="act ghost" id="resetLyricBtn">타이밍 로그 초기화</button>
       </div>
-      <div class="helper-text">LRC 파일은 들어 있는 시간값을 자동으로 읽고(같은 시간의 두 줄은 원문/번역으로 합쳐요), TXT는 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
+      <div class="helper-text" id="lyricFileHelper">LRC 파일은 들어 있는 시간값을 자동으로 읽고, TXT는 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
     </div>
 
     <div class="card">
@@ -518,9 +527,12 @@ Yoru wo koete
     </div>
 
     <div class="card timeline-card">
-      <h3>자막 타이밍 로그</h3>
+      <div class="timeline-title-row">
+        <h3>자막 타이밍 로그</h3>
+        <button type="button" class="act ghost subtitle-download" id="downloadSubtitleBtn">유튜브용 자막 파일</button>
+      </div>
       <div class="timeline-toolbar">
-        <span class="helper-text" style="margin:0">시간 숫자를 직접 고치면 미리보기와 녹화에도 바로 반영돼요. 단위는 초예요.</span>
+        <span class="helper-text" style="margin:0">시간 숫자를 직접 고치면 미리보기와 녹화에도 바로 반영돼요. 단위는 초예요. 완성 후 버튼을 누르면 유튜브 업로드용 SRT 파일을 내려받아요.</span>
       </div>
       <div class="cue-table-wrap">
         <table class="cue-table">
@@ -604,6 +616,7 @@ Yoru wo koete
   let selectedOverlayId = null;
   let activeDrag = null;
   let activeMode = 'video';
+  let lyricMode = 'single';
   let lyricLines = [];   // [{a, b}]
   let cueLogs = [];
   let cueCursor = -1;
@@ -672,6 +685,10 @@ Yoru wo koete
     lyricFileInput: document.getElementById('lyricFileInput'),
     lyricFileDrop: document.getElementById('lyricFileDrop'),
     lyricFileName: document.getElementById('lyricFileName'),
+    lyricModeSingleChip: document.getElementById('lyricModeSingleChip'),
+    lyricModeDoubleChip: document.getElementById('lyricModeDoubleChip'),
+    lyricFormatHint: document.getElementById('lyricFormatHint'),
+    lyricFileHelper: document.getElementById('lyricFileHelper'),
     lyricsInput: document.getElementById('lyricsInput'),
     applyLyricsBtn: document.getElementById('applyLyricsBtn'),
     resetLyricBtn: document.getElementById('resetLyricBtn'),
@@ -681,6 +698,7 @@ Yoru wo koete
     lyricNext: document.getElementById('lyricNext'),
     currentTimeBadge: document.getElementById('currentTimeBadge'),
     cueLogBody: document.getElementById('cueLogBody'),
+    downloadSubtitleBtn: document.getElementById('downloadSubtitleBtn'),
     subtitlesEnabledChip: document.getElementById('subtitlesEnabledChip'),
     subtitleShadowChip: document.getElementById('subtitleShadowChip'),
     subtitleSize: document.getElementById('subtitleSize'),
@@ -713,7 +731,8 @@ Yoru wo koete
     return `${String(min).padStart(2,'0')}:${sec.toFixed(2).padStart(5,'0')}`;
   }
 
-  // 가사 파싱: 각 큐는 {a:원문, b:번역}. 빈 줄로 큐를 구분하고, 큐 안 2번째 줄은 번역.
+  // 가사 파싱: 한줄가사는 비어 있지 않은 각 줄을 하나의 큐로,
+  // 두줄가사는 원어+번역 두 줄을 하나의 큐로 묶어요.
   function parseLyricText(raw){
     const text = String(raw || '').replace(/\r/g,'');
     const hasLrc = /\[\d{1,2}:\d{2}/.test(text);
@@ -731,38 +750,95 @@ Yoru wo koete
       });
       entries.sort((a,b)=>a.time-b.time);
       const lines = [], cues = [];
-      for(let i=0;i<entries.length;i++){
-        const cur = entries[i];
-        const last = lines[lines.length-1];
-        if(last && !last.b && cues.length && Math.abs(cur.time - cues[cues.length-1].time) < 0.03){
-          last.b = cur.text;
-        }else{
+      if(lyricMode==='single'){
+        entries.forEach(cur=>{
           cues.push({index:lines.length, time:cur.time});
           lines.push({a:cur.text, b:''});
+        });
+      }else{
+        for(let i=0;i<entries.length;i++){
+          const cur = entries[i];
+          const last = lines[lines.length-1];
+          if(last && !last.b && cues.length && Math.abs(cur.time - cues[cues.length-1].time) < 0.03){
+            last.b = cur.text;
+          }else{
+            cues.push({index:lines.length, time:cur.time});
+            lines.push({a:cur.text, b:''});
+          }
         }
       }
       return {lines, cues};
     }
+
     const rawLines = text.split('\n');
-    const hasBlank = rawLines.some(l=>l.trim()==='');
     const lines = [];
-    if(hasBlank){
-      let block = [];
-      const flush = ()=>{
-        if(block.length){
-          const a = block[0].trim();
-          const b = block.slice(1).join(' ').trim();
-          if(a || b) lines.push({a, b});
-        }
-        block = [];
-      };
-      rawLines.forEach(l=>{ if(l.trim()==='') flush(); else block.push(l); });
-      flush();
+    if(lyricMode==='single'){
+      rawLines.forEach(line=>{
+        const value=line.trim();
+        if(value) lines.push({a:value, b:''});
+      });
+      return {lines, cues:[]};
+    }
+
+    const blocks = text.split(/\n\s*\n/).map(block=>block.split('\n').map(line=>line.trim()).filter(Boolean)).filter(block=>block.length);
+    if(blocks.length>1){
+      blocks.forEach(block=>{
+        const a=block[0]||'';
+        const b=block.slice(1).join(' ').trim();
+        if(a || b) lines.push({a,b});
+      });
     }else{
-      rawLines.forEach(l=>{ const t=l.trim(); if(t) lines.push({a:t, b:''}); });
+      const compact = rawLines.map(line=>line.trim()).filter(Boolean);
+      for(let i=0;i<compact.length;i+=2){
+        lines.push({a:compact[i]||'', b:compact[i+1]||''});
+      }
     }
     return {lines, cues:[]};
   }
+
+  function updateLyricModeUi(){
+    const isDouble = lyricMode==='double';
+    [els.lyricModeSingleChip, els.lyricModeDoubleChip].forEach(btn=>{
+      if(!btn) return;
+      const on = btn.dataset.lyricMode===lyricMode;
+      btn.classList.toggle('on',on);
+      btn.setAttribute('aria-checked',String(on));
+    });
+    if(els.lyricFormatHint){
+      els.lyricFormatHint.textContent = isDouble
+        ? '원어 한 줄과 번역 한 줄을 한 가사로 묶어요. 가사 묶음 사이는 빈 줄로 구분해요.'
+        : '한 줄마다 하나의 가사로 적용해요. 빈 줄은 자동으로 건너뛰어요.';
+    }
+    if(els.lyricFileHelper){
+      els.lyricFileHelper.textContent = isDouble
+        ? 'LRC는 같은 시간의 두 줄을 원어/번역으로 합치고, TXT는 원어+번역 두 줄을 한 가사로 묶어요.'
+        : 'LRC는 타임태그가 붙은 각 줄을 하나의 가사로 읽고, TXT는 각 줄의 시간을 직접 찍어요.';
+    }
+    if(els.lyricsInput){
+      els.lyricsInput.placeholder = isDouble
+        ? `Kimi no koe ga kikoeru\n너의 목소리가 들려\n\nYoru wo koete\n밤을 넘어서\n\n(원어+번역을 두 줄씩 입력해요)`
+        : `Kimi no koe ga kikoeru\nYoru wo koete\nHikari no saki e\n\n(한 줄마다 다음 가사로 적용돼요)`;
+    }
+  }
+
+  function setLyricMode(mode){
+    const nextMode = mode==='double' ? 'double' : 'single';
+    if(nextMode===lyricMode) return;
+    if(cueLogs.length && !window.confirm('가사 형식을 바꾸면 현재 자막 타이밍 로그가 초기화됩니다. 변경하시겠습니까?')) return;
+    lyricMode = nextMode;
+    updateLyricModeUi();
+    if(els.lyricsInput.value.trim()){
+      applyLyricsFromInput();
+      setStatus(`<b>${lyricMode==='double'?'두줄가사':'한줄가사'}</b> 형식으로 다시 반영했어요. 타이밍 로그도 새 형식 기준으로 다시 정리됐어요.`);
+    }else{
+      lyricLines=[]; cueLogs=[]; cueCursor=-1;
+      updateCueTable(); updateLyricUi(-1);
+      setStatus(`<b>${lyricMode==='double'?'두줄가사':'한줄가사'}</b> 형식을 선택했어요.`);
+      if(!running) drawStatic();
+    }
+  }
+
+  document.querySelectorAll('[data-lyric-mode]').forEach(btn=>btn.addEventListener('click',()=>setLyricMode(btn.dataset.lyricMode)));
 
   function applyLyricsFromInput(){
     const parsed = parseLyricText(els.lyricsInput.value);
@@ -789,6 +865,10 @@ Yoru wo koete
   }
 
   function getCueByIndex(index){ return cueLogs.find(cue=>cue.index===index) || null; }
+  function overwriteCueLog(index,time){
+    cueLogs = cueLogs.filter(cue=>cue.index!==index);
+    cueLogs.push({index, time});
+  }
   function getActiveLyricIndex(time){
     let active = -1;
     const sorted = cueLogs.slice().sort((a,b)=>a.time-b.time || a.index-b.index);
@@ -829,7 +909,65 @@ Yoru wo koete
     els.cueLogBody.innerHTML = rows;
   }
 
+  function formatSrtTime(seconds){
+    const safe = Math.max(0, Number(seconds) || 0);
+    const totalMs = Math.round(safe * 1000);
+    const ms = totalMs % 1000;
+    const totalSec = Math.floor(totalMs / 1000);
+    const sec = totalSec % 60;
+    const totalMin = Math.floor(totalSec / 60);
+    const min = totalMin % 60;
+    const hour = Math.floor(totalMin / 60);
+    return `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+  }
+
+  function downloadYoutubeSubtitle(){
+    const validCues = cueLogs
+      .filter(cue=>lyricLines[cue.index] && Number.isFinite(Number(cue.time)))
+      .map(cue=>({index:cue.index, time:Math.max(0, Number(cue.time) || 0)}))
+      .sort((a,b)=>a.time-b.time || a.index-b.index);
+
+    if(!validCues.length){
+      setStatus('먼저 가사 타이밍 로그를 한 개 이상 만들어 주세요.');
+      return;
+    }
+
+    if(validCues.length < lyricLines.length){
+      const proceed = window.confirm(`아직 타이밍이 없는 가사가 ${lyricLines.length-validCues.length}개 있습니다. 기록된 자막만 다운로드하시겠습니까?`);
+      if(!proceed) return;
+    }
+
+    const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+    const blocks = validCues.map((cue, position)=>{
+      const start = cue.time;
+      let end;
+      const next = validCues[position+1];
+      if(next && next.time > start + 0.02) end = Math.max(start + 0.01, next.time - 0.01);
+      else if(next) end = start + 0.5;
+      else if(duration > start + 0.05) end = duration;
+      else end = start + 3;
+
+      const lyric = lyricLines[cue.index] || {};
+      const lines = [lyric.a, lyric.b].filter(line=>String(line || '').trim()).map(line=>String(line).trim());
+      return `${position+1}\r\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\r\n${lines.join('\r\n')}\r\n`;
+    });
+
+    const srtText = blocks.join('\r\n');
+    const blob = new Blob(['\ufeff', srtText], {type:'application/x-subrip;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const baseName = (title || 'music_video').trim().replace(/[\\/:*?"<>|]+/g,'_') || 'music_video';
+    anchor.href = url;
+    anchor.download = `${baseName}_유튜브용_자막.srt`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    setStatus(`유튜브 업로드용 <b>SRT 자막 파일</b>을 다운로드했어요. 자막 ${validCues.length}개가 포함됐어요.`);
+  }
+
   els.applyLyricsBtn.addEventListener('click', applyLyricsFromInput);
+  els.downloadSubtitleBtn.addEventListener('click', downloadYoutubeSubtitle);
   els.resetLyricBtn.addEventListener('click', ()=>{
     cueLogs = []; cueCursor = -1;
     updateCueTable(); updateLyricUi(-1);
@@ -844,12 +982,23 @@ Yoru wo koete
       setStatus('마지막 가사까지 모두 적용했어요. 아래 로그의 시간 숫자를 수정해 세밀하게 맞출 수 있어요.');
       return;
     }
-    cueCursor = nextIndex;
     const now = Math.max(0, audio.currentTime || 0);
-    const existing = getCueByIndex(cueCursor);
-    if(existing) existing.time = now; else cueLogs.push({index:cueCursor, time:now});
+    const existing = getCueByIndex(nextIndex);
+    if(existing){
+      const shouldOverwrite = window.confirm('해당 가사는 이미 적용된 로그가 남아있습니다. 로그를 수정하시겠습니까?');
+      if(!shouldOverwrite){
+        setStatus('기존 로그를 유지했어요. 가사 순서와 시간을 확인한 뒤 다시 적용해 주세요.');
+        return;
+      }
+      overwriteCueLog(nextIndex, now);
+    }else{
+      cueLogs.push({index:nextIndex, time:now});
+    }
+    cueCursor = nextIndex;
     updateCueTable(); updateLyricUi(cueCursor);
-    setStatus(`<b>${cueCursor+1}번째 가사</b>를 ${formatTime(now)}에 적용했어요.`);
+    setStatus(existing
+      ? `<b>${cueCursor+1}번째 가사</b>의 기존 로그를 ${formatTime(now)}로 최종 덮어썼어요.`
+      : `<b>${cueCursor+1}번째 가사</b>를 ${formatTime(now)}에 적용했어요.`);
     if(!running) drawStatic();
   });
   els.cueLogBody.addEventListener('change', e=>{
@@ -1523,7 +1672,7 @@ Yoru wo koete
     }
   }
 
-  // ---------- 자막 (2줄: 원문 + 번역, 드래그 이동) ----------
+  // ---------- 자막 (한줄/두줄 선택, 드래그 이동) ----------
   function rgbaFromHex(hex,alpha){
     const value=String(hex||'#ffffff').replace('#','');
     const full=value.length===3 ? value.split('').map(ch=>ch+ch).join('') : value.padEnd(6,'f').slice(0,6);
@@ -1851,7 +2000,7 @@ Yoru wo koete
   canvas.addEventListener('contextlost', e=>{ e.preventDefault(); }, false);
   canvas.addEventListener('contextrestored', ()=>{ if(!running) drawStatic(); }, false);
 
-  setAccentVar(); refreshBgUI(); updateOverlayList(); updateStickerControlState();
+  setAccentVar(); refreshBgUI(); updateOverlayList(); updateStickerControlState(); updateLyricModeUi();
   updateCueTable(); updateLyricUi(-1); setMode('video'); updateSeekUi();
   applyCanvasResolution(getRecordPreset()); drawStatic();
 })();
