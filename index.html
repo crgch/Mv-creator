@@ -21,9 +21,13 @@
     font-family:"Pretendard","Apple SD Gothic Neo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     -webkit-font-smoothing:antialiased;}
   .wrap{max-width:1440px;margin:0 auto;padding:20px clamp(34px,6vw,108px) 52px;}
-  header{width:min(100%,1120px);display:flex;align-items:baseline;gap:14px;margin:0 auto 16px;flex-wrap:wrap}
+  header{width:min(100%,1120px);display:flex;align-items:center;gap:14px;margin:0 auto 16px;flex-wrap:wrap}
+  .header-copy{display:flex;align-items:baseline;gap:14px;min-width:0;flex:1;flex-wrap:wrap}
   header h1{font-size:21px;margin:0;letter-spacing:-.02em;font-weight:800}
   header .sub{font-size:12px;color:var(--ink-dim)}
+  .mode-tabs{margin-left:auto;display:flex;gap:4px;padding:4px;border:1px solid var(--panel-line);border-radius:12px;background:#fff;box-shadow:0 8px 24px -18px rgba(20,20,40,.5)}
+  .mode-tab{appearance:none;border:0;background:transparent;color:var(--ink-dim);border-radius:8px;padding:8px 18px;font:700 13px/1 inherit;cursor:pointer;transition:.15s}
+  .mode-tab.active{background:var(--accent);color:#fff;box-shadow:0 5px 14px -8px rgba(138,82,255,.8)}
   .preview-layout{width:min(100%,1120px);display:grid;grid-template-columns:minmax(0,1.75fr) minmax(320px,.95fr);
     gap:12px;align-items:stretch;margin:0 auto}
   .stage-wrap{position:relative;width:100%;aspect-ratio:16/9;margin:0;border-radius:var(--radius);
@@ -69,9 +73,10 @@
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
   label.lbl{font-size:11px;color:var(--ink-dim);letter-spacing:.04em}
-  input[type=text],input[type=number]{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);
+  input[type=text],input[type=number],textarea{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);
     border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit}
-  input[type=text]:focus,input[type=number]:focus{outline:none;border-color:var(--accent)}
+  input[type=text]:focus,input[type=number]:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  textarea{width:100%;min-height:220px;resize:vertical;line-height:1.6}
   select{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);border-radius:8px;
     padding:9px 11px;font-size:14px;font-family:inherit}
   input[type=range]{width:100%;accent-color:var(--accent)}
@@ -97,6 +102,30 @@
   .wrap>.card{width:min(100%,1120px);margin:12px auto 0 !important}
   .foot{width:min(100%,1120px);margin:20px auto 0;font-size:12px;color:var(--ink-dim);line-height:1.7}
   .foot code{background:#eef0f4;padding:2px 6px;border-radius:5px;color:var(--accent)}
+  [hidden]{display:none !important}
+  .subtitle-panel{width:min(100%,1120px);margin:16px auto 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:12px;align-items:start}
+  .subtitle-panel .card{margin:0}
+  .subtitle-panel .timeline-card{grid-column:1/-1}
+  .lyric-context{display:grid;gap:8px;margin-top:12px}
+  .lyric-line-box{border:1px solid var(--panel-line);border-radius:10px;background:#fafafd;padding:10px 12px;min-height:48px;display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:10px}
+  .lyric-line-box .tag{font-size:10px;letter-spacing:.06em;color:var(--ink-dim);font-weight:800}
+  .lyric-line-box .text{font-size:13px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
+  .lyric-line-box.current{border-color:rgba(138,82,255,.55);background:rgba(138,82,255,.08)}
+  .lyric-line-box.current .text{font-size:15px;font-weight:800;color:#5d2fd2}
+  .timing-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;margin-top:12px}
+  .time-display{border:1px solid var(--panel-line);border-radius:10px;background:#fafafd;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--ink-dim)}
+  .time-display b{font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .next-lyric{min-width:190px;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+  .timeline-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .cue-table-wrap{overflow:auto;border:1px solid var(--panel-line);border-radius:10px}
+  .cue-table{width:100%;border-collapse:collapse;min-width:680px;font-size:12px}
+  .cue-table th,.cue-table td{padding:9px 10px;border-bottom:1px solid var(--panel-line);text-align:left;vertical-align:middle}
+  .cue-table th{position:sticky;top:0;background:#f4f5f8;color:var(--ink-dim);font-size:10px;letter-spacing:.06em;z-index:1}
+  .cue-table tr:last-child td{border-bottom:0}
+  .cue-table input[type=number]{width:100px;padding:7px 8px;font-variant-numeric:tabular-nums}
+  .cue-table .lyric-cell{max-width:640px;word-break:keep-all;overflow-wrap:anywhere}
+  .mini-act{border:1px solid var(--panel-line);background:#fff;color:var(--ink);border-radius:7px;padding:6px 9px;font:700 11px/1 inherit;cursor:pointer}
+  .empty-log{padding:18px;text-align:center;color:var(--ink-dim)}
 
   @media(max-height:820px) and (min-width:901px){
     .wrap{padding-top:12px;padding-bottom:36px}
@@ -118,18 +147,31 @@
     .preview-actions .rec,.preview-actions .ghost{grid-column:1/-1}
     .controls{column-count:1}
     .mini-grid{grid-template-columns:1fr}
+    .subtitle-panel{grid-template-columns:1fr}
+    .subtitle-panel .timeline-card{grid-column:auto}
+    .mode-tabs{width:100%;margin-left:0}
+    .mode-tab{flex:1}
   }
 
   @media(max-width:560px){
     .range-pair{grid-template-columns:1fr}
+    .timing-actions{grid-template-columns:1fr}
+    .next-lyric{width:100%;min-width:0}
+    .lyric-line-box{grid-template-columns:64px minmax(0,1fr)}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>스챗 뮤직비디오 메이커</h1>
-    <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 별 궤도 &amp; 후광 비주얼</span>
+    <div class="header-copy">
+      <h1>스챗 뮤직비디오 메이커</h1>
+      <span class="sub">캐릭터 이미지 + mp3 → 유튜브 16:9 별 궤도 &amp; 후광 비주얼</span>
+    </div>
+    <div class="mode-tabs" role="tablist" aria-label="편집 모드">
+      <button type="button" class="mode-tab active" data-mode="video" role="tab" aria-selected="true">영상</button>
+      <button type="button" class="mode-tab" data-mode="subtitle" role="tab" aria-selected="false">자막</button>
+    </div>
   </header>
 
   <div class="preview-layout">
@@ -162,7 +204,7 @@
     </aside>
   </div>
 
-  <div class="controls">
+  <div class="controls" id="videoPanel" data-panel="video">
     <div class="control-column">
       <div class="card">
         <h3>노래 파일</h3>
@@ -345,6 +387,17 @@
         <label class="lbl" style="display:block;margin-top:10px">음파 링 세기</label>
         <input type="range" id="eqRingIntensity" min="0" max="100" value="60">
         <div style="height:12px"></div>
+        <label class="lbl">음파 감도 (낮고 높은 파장의 높이 차이)</label>
+        <input type="range" id="eqRingSensitivity" min="0" max="100" value="62">
+        <div style="height:14px"></div>
+        <label class="lbl">주파수 펄스 링</label>
+        <div class="toggle-row" style="margin-top:6px">
+          <span class="chip on" id="frequencyPulseChip">주파수 링 켜기</span>
+        </div>
+        <label class="lbl" style="display:block;margin-top:10px">주파수 요동 세기</label>
+        <input type="range" id="frequencyPulseIntensity" min="0" max="100" value="58">
+        <div class="helper-text">평소에는 매끈한 원형 링으로 있다가, 노래가 커지거나 비트가 들어올 때만 심박수처럼 위아래로 요동쳐요.</div>
+        <div style="height:14px"></div>
         <div class="field">
           <label class="lbl">이미지 돌아가기 (LP 느낌)</label>
           <div class="toggle-row" style="margin-top:0">
@@ -381,8 +434,84 @@
     </div>
   </div>
 
+
+  <section class="subtitle-panel" id="subtitlePanel" data-panel="subtitle" hidden>
+    <div class="card">
+      <h3>가사 · 자막 입력</h3>
+      <div class="drop" id="lyricFileDrop">📄 <b>가사 파일</b> 클릭 또는 드래그 <small>(txt · lrc)</small><div class="filename" id="lyricFileName"></div></div>
+      <input type="file" id="lyricFileInput" accept=".txt,.lrc,text/plain" hidden>
+      <div style="height:12px"></div>
+      <div class="field">
+        <label class="lbl">한 줄에 한 가사씩 입력</label>
+        <textarea id="lyricsInput" placeholder="첫 번째 가사
+두 번째 가사
+세 번째 가사"></textarea>
+      </div>
+      <div class="btns">
+        <button type="button" class="act ghost" id="applyLyricsBtn">가사 반영</button>
+        <button type="button" class="act ghost" id="resetLyricBtn">타이밍 로그 초기화</button>
+      </div>
+      <div class="helper-text">LRC 파일은 들어 있는 시간값을 자동으로 읽고, TXT 파일은 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
+    </div>
+
+    <div class="card">
+      <h3>실시간 3줄 자막</h3>
+      <div class="lyric-context">
+        <div class="lyric-line-box"><span class="tag">이전 가사</span><span class="text" id="lyricPrev">—</span></div>
+        <div class="lyric-line-box current"><span class="tag">지금 가사</span><span class="text" id="lyricCurrent">아직 적용된 가사 없음</span></div>
+        <div class="lyric-line-box"><span class="tag">다음 가사</span><span class="text" id="lyricNext">—</span></div>
+      </div>
+      <div class="timing-actions">
+        <div class="time-display"><span>현재 재생시간</span><b id="currentTimeBadge">00:00.00</b></div>
+        <button type="button" class="act next-lyric" id="nextLyricBtn">다음 줄 가사 적용</button>
+      </div>
+      <div class="helper-text">노래를 재생한 뒤 가사가 시작되는 순간마다 버튼을 누르면, 그 시각이 로그에 기록되고 이전/지금/다음 가사가 자동으로 갱신돼요.</div>
+      <div style="height:14px"></div>
+      <h3>자막 스타일</h3>
+      <div class="toggle-row">
+        <span class="chip on" id="subtitlesEnabledChip">자막 표시</span>
+        <span class="chip on" id="subtitleShadowChip">자막 그림자</span>
+      </div>
+      <div style="height:12px"></div>
+      <div class="range-pair">
+        <div class="range-box">
+          <label class="lbl">현재 가사 크기</label>
+          <input type="range" id="subtitleSize" min="24" max="96" value="52">
+        </div>
+        <div class="range-box">
+          <label class="lbl">자막 세로 위치</label>
+          <input type="range" id="subtitleY" min="45" max="92" value="78">
+        </div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="mini-grid">
+        <div class="mini-stack">
+          <label class="lbl">자막 색</label>
+          <div class="row"><input type="color" id="subtitleColor" class="swatch" value="#ffffff"></div>
+        </div>
+        <div class="field">
+          <label class="lbl">이전·다음 가사 밝기</label>
+          <input type="range" id="subtitleSideOpacity" min="10" max="90" value="42">
+        </div>
+      </div>
+    </div>
+
+    <div class="card timeline-card">
+      <h3>자막 타이밍 로그</h3>
+      <div class="timeline-toolbar">
+        <span class="helper-text" style="margin:0">시간 숫자를 직접 고치면 미리보기와 녹화에도 바로 반영돼요. 단위는 초예요.</span>
+      </div>
+      <div class="cue-table-wrap">
+        <table class="cue-table">
+          <thead><tr><th style="width:58px">줄</th><th style="width:130px">시작 시간(초)</th><th>가사</th><th style="width:90px">현재시간</th></tr></thead>
+          <tbody id="cueLogBody"><tr><td colspan="4" class="empty-log">아직 기록된 타이밍이 없어요.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <div class="foot">
-    <b>녹화 안내</b> — 녹화는 실시간(노래 길이만큼)으로 진행돼요. 녹화 버튼을 누르면 노래가 처음부터 재생되며, 끝나면 자동으로 <code>.webm</code> 파일이 다운로드돼요. 유튜브는 webm 업로드를 그대로 지원해요. 720p/1080p 60fps는 더 부드럽고, 1440p는 파일이 더 커지고 기기 성능을 더 사용해요. mp4가 꼭 필요하면 다운로드한 webm을 변환기(예: CloudConvert)에 넣으면 돼요.
+    <b>녹화 안내</b> — 영상 탭에서 만든 화면 설정과 자막 탭의 타이밍은 같은 캔버스에 합쳐져 녹화돼요. 녹화는 실시간(노래 길이만큼)으로 진행되고, 끝나면 자동으로 <code>.webm</code> 파일이 다운로드돼요. 유튜브는 webm 업로드를 그대로 지원해요. mp4가 꼭 필요하면 다운로드한 webm을 변환기에 넣으면 돼요.
   </div>
 </div>
 
@@ -430,6 +559,9 @@
   let sparkles = [];
   let eqRing = true;
   let eqRingIntensity = 60;
+  let eqRingSensitivity = 62;
+  let frequencyPulse = true;
+  let frequencyPulseIntensity = 58;
   let ripples = [];
   let prevGlowEnv = 0, lastRippleT = -1;
   let title = '';
@@ -449,6 +581,16 @@
   let overlaySerial = 0;
   let selectedOverlayId = null;
   let activeDrag = null;
+  let activeMode = 'video';
+  let lyricLines = [];
+  let cueLogs = [];
+  let cueCursor = -1;
+  let subtitlesEnabled = true;
+  let subtitleShadow = true;
+  let subtitleFontSize = 52;
+  let subtitleYRatio = 0.78;
+  let subtitleColor = '#ffffff';
+  let subtitleSideOpacity = 0.42;
 
   const els = {
     imgInput: document.getElementById('imgInput'),
@@ -473,6 +615,9 @@
     backGlow: document.getElementById('backGlow'),
     eqRingChip: document.getElementById('eqRingChip'),
     eqRingIntensity: document.getElementById('eqRingIntensity'),
+    eqRingSensitivity: document.getElementById('eqRingSensitivity'),
+    frequencyPulseChip: document.getElementById('frequencyPulseChip'),
+    frequencyPulseIntensity: document.getElementById('frequencyPulseIntensity'),
     imgModeOriginalChip: document.getElementById('imgModeOriginalChip'),
     imgModeDiscChip: document.getElementById('imgModeDiscChip'),
     mainImageCenterBtn: document.getElementById('mainImageCenterBtn'),
@@ -492,10 +637,220 @@
     titleShadowChip: document.getElementById('titleShadowChip'),
     titleGuideChip: document.getElementById('titleGuideChip'),
     titleCenterBtn: document.getElementById('titleCenterBtn'),
+    videoPanel: document.getElementById('videoPanel'),
+    subtitlePanel: document.getElementById('subtitlePanel'),
+    lyricFileInput: document.getElementById('lyricFileInput'),
+    lyricFileDrop: document.getElementById('lyricFileDrop'),
+    lyricFileName: document.getElementById('lyricFileName'),
+    lyricsInput: document.getElementById('lyricsInput'),
+    applyLyricsBtn: document.getElementById('applyLyricsBtn'),
+    resetLyricBtn: document.getElementById('resetLyricBtn'),
+    nextLyricBtn: document.getElementById('nextLyricBtn'),
+    lyricPrev: document.getElementById('lyricPrev'),
+    lyricCurrent: document.getElementById('lyricCurrent'),
+    lyricNext: document.getElementById('lyricNext'),
+    currentTimeBadge: document.getElementById('currentTimeBadge'),
+    cueLogBody: document.getElementById('cueLogBody'),
+    subtitlesEnabledChip: document.getElementById('subtitlesEnabledChip'),
+    subtitleShadowChip: document.getElementById('subtitleShadowChip'),
+    subtitleSize: document.getElementById('subtitleSize'),
+    subtitleY: document.getElementById('subtitleY'),
+    subtitleColor: document.getElementById('subtitleColor'),
+    subtitleSideOpacity: document.getElementById('subtitleSideOpacity'),
   };
 
   function setStatus(html){ statusEl.innerHTML = html; }
   function setAccentVar(){ /* UI 색은 고정 유지 — 글로우 추출색이 UI 텍스트를 흐리게 만들지 않도록 */ }
+
+  function setMode(mode){
+    activeMode = mode === 'subtitle' ? 'subtitle' : 'video';
+    document.querySelectorAll('.mode-tab').forEach(btn=>{
+      const on = btn.dataset.mode === activeMode;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', String(on));
+    });
+    els.videoPanel.hidden = activeMode !== 'video';
+    els.subtitlePanel.hidden = activeMode !== 'subtitle';
+    updateLyricUi(resolveLyricPreviewIndex());
+    if(!running) drawStatic();
+  }
+
+  document.querySelectorAll('.mode-tab').forEach(btn=>btn.addEventListener('click', ()=>setMode(btn.dataset.mode)));
+
+  function formatTime(seconds){
+    const safe = Math.max(0, Number(seconds) || 0);
+    const min = Math.floor(safe / 60);
+    const sec = safe - min * 60;
+    return `${String(min).padStart(2,'0')}:${sec.toFixed(2).padStart(5,'0')}`;
+  }
+
+  function parseLyricText(raw){
+    const timed = [];
+    const plain = [];
+    String(raw || '').replace(/\r/g,'').split('\n').forEach(line=>{
+      const timeTags = Array.from(line.matchAll(/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g));
+      const cleaned = line.replace(/\[[^\]]+\]/g,'').trim();
+      if(!cleaned) return;
+      if(timeTags.length){
+        timeTags.forEach(match=>{
+          const min = Number(match[1]) || 0;
+          const sec = Number(match[2]) || 0;
+          const fractionRaw = match[3] || '';
+          const fraction = fractionRaw ? Number(fractionRaw) / Math.pow(10, fractionRaw.length) : 0;
+          timed.push({text:cleaned, time:min*60 + sec + fraction});
+        });
+      }else{
+        plain.push(cleaned);
+      }
+    });
+    if(timed.length){
+      timed.sort((a,b)=>a.time-b.time);
+      return {
+        lines: timed.map(item=>item.text),
+        cues: timed.map((item,index)=>({index,time:item.time}))
+      };
+    }
+    return {lines:plain,cues:[]};
+  }
+
+  function applyLyricsFromInput(){
+    const parsed = parseLyricText(els.lyricsInput.value);
+    lyricLines = parsed.lines;
+    cueLogs = parsed.cues;
+    cueCursor = -1;
+    if(cueLogs.length) cueCursor = getActiveLyricIndex(audio.currentTime || 0);
+    updateCueTable();
+    updateLyricUi(resolveLyricPreviewIndex());
+    if(lyricLines.length){
+      setStatus(cueLogs.length ? `LRC 시간값 <b>${cueLogs.length}개</b>를 불러왔어요. 숫자는 자막 로그에서 직접 수정할 수 있어요.` : `가사 <b>${lyricLines.length}줄</b>을 반영했어요. 노래를 재생하며 다음 줄 버튼을 눌러 타이밍을 찍어주세요.`);
+    }else{
+      setStatus('가사를 한 줄 이상 입력해 주세요.');
+    }
+    if(!running) drawStatic();
+  }
+
+  function loadLyricFile(file){
+    els.lyricFileName.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      els.lyricsInput.value = String(reader.result || '');
+      applyLyricsFromInput();
+    };
+    reader.onerror = ()=>setStatus('가사 파일을 읽지 못했어요. UTF-8 TXT 또는 LRC 파일인지 확인해 주세요.');
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function getCueByIndex(index){ return cueLogs.find(cue=>cue.index===index) || null; }
+
+  function getActiveLyricIndex(time){
+    let active = -1;
+    const sorted = cueLogs.slice().sort((a,b)=>a.time-b.time || a.index-b.index);
+    for(const cue of sorted){
+      if(cue.time <= time + 0.01) active = cue.index;
+      else break;
+    }
+    return active;
+  }
+
+  function resolveLyricPreviewIndex(){
+    if(running || isRecording) return getActiveLyricIndex(audio.currentTime || 0);
+    if(cueCursor >= 0) return cueCursor;
+    if(cueLogs.length) return getActiveLyricIndex(audio.currentTime || 0);
+    return -1;
+  }
+
+  function updateLyricUi(index=resolveLyricPreviewIndex()){
+    const prev = index > 0 ? lyricLines[index-1] : '';
+    const current = index >= 0 ? lyricLines[index] : '';
+    const next = index >= 0 ? lyricLines[index+1] : lyricLines[0];
+    els.lyricPrev.textContent = prev || '—';
+    els.lyricCurrent.textContent = current || '아직 적용된 가사 없음';
+    els.lyricNext.textContent = next || '—';
+    els.currentTimeBadge.textContent = formatTime(audio.currentTime || 0);
+  }
+
+  function updateCueTable(){
+    if(!cueLogs.length){
+      els.cueLogBody.innerHTML = '<tr><td colspan="4" class="empty-log">아직 기록된 타이밍이 없어요.</td></tr>';
+      return;
+    }
+    const rows = cueLogs.slice().sort((a,b)=>a.index-b.index).map(cue=>{
+      const lyric = lyricLines[cue.index] || '';
+      return `<tr data-index="${cue.index}"><td>${cue.index+1}</td><td><input type="number" class="cue-time" min="0" step="0.01" value="${cue.time.toFixed(2)}" aria-label="${cue.index+1}번 가사 시작 시간"></td><td class="lyric-cell">${escapeHtml(lyric)}</td><td><button type="button" class="mini-act cue-now">현재시간</button></td></tr>`;
+    }).join('');
+    els.cueLogBody.innerHTML = rows;
+  }
+
+  els.applyLyricsBtn.addEventListener('click', applyLyricsFromInput);
+  els.resetLyricBtn.addEventListener('click', ()=>{
+    cueLogs = [];
+    cueCursor = -1;
+    updateCueTable();
+    updateLyricUi(-1);
+    setStatus('자막 타이밍 로그만 초기화했어요. 가사 내용은 그대로 남아 있어요.');
+    if(!running) drawStatic();
+  });
+  els.nextLyricBtn.addEventListener('click', ()=>{
+    if(!lyricLines.length) applyLyricsFromInput();
+    if(!lyricLines.length) return;
+    const nextIndex = cueCursor + 1;
+    if(nextIndex >= lyricLines.length){
+      setStatus('마지막 가사까지 모두 적용했어요. 아래 로그의 시간 숫자를 수정해 세밀하게 맞출 수 있어요.');
+      return;
+    }
+    cueCursor = nextIndex;
+    const now = Math.max(0, audio.currentTime || 0);
+    const existing = getCueByIndex(cueCursor);
+    if(existing) existing.time = now;
+    else cueLogs.push({index:cueCursor,time:now});
+    updateCueTable();
+    updateLyricUi(cueCursor);
+    setStatus(`<b>${cueCursor+1}번째 가사</b>를 ${formatTime(now)}에 적용했어요.`);
+    if(!running) drawStatic();
+  });
+  els.cueLogBody.addEventListener('change', e=>{
+    const input = e.target.closest('.cue-time');
+    if(!input) return;
+    const row = input.closest('tr[data-index]');
+    const index = Number(row?.dataset.index);
+    const cue = getCueByIndex(index);
+    if(!cue) return;
+    cue.time = Math.max(0, Number(input.value) || 0);
+    input.value = cue.time.toFixed(2);
+    updateLyricUi(resolveLyricPreviewIndex());
+    if(!running) drawStatic();
+  });
+  els.cueLogBody.addEventListener('click', e=>{
+    const btn = e.target.closest('.cue-now');
+    if(!btn) return;
+    const row = btn.closest('tr[data-index]');
+    const index = Number(row?.dataset.index);
+    const cue = getCueByIndex(index);
+    if(!cue) return;
+    cue.time = Math.max(0, audio.currentTime || 0);
+    cueCursor = index;
+    updateCueTable();
+    updateLyricUi(index);
+    if(!running) drawStatic();
+  });
+  els.subtitlesEnabledChip.addEventListener('click', function(){
+    subtitlesEnabled = !subtitlesEnabled;
+    this.classList.toggle('on', subtitlesEnabled);
+    this.textContent = subtitlesEnabled ? '자막 표시' : '자막 숨김';
+    if(!running) drawStatic();
+  });
+  els.subtitleShadowChip.addEventListener('click', function(){
+    subtitleShadow = !subtitleShadow;
+    this.classList.toggle('on', subtitleShadow);
+    this.textContent = subtitleShadow ? '자막 그림자' : '그림자 없음';
+    if(!running) drawStatic();
+  });
+  els.subtitleSize.addEventListener('input', e=>{ subtitleFontSize=Number(e.target.value)||52; if(!running) drawStatic(); });
+  els.subtitleY.addEventListener('input', e=>{ subtitleYRatio=(Number(e.target.value)||78)/100; if(!running) drawStatic(); });
+  els.subtitleColor.addEventListener('input', e=>{ subtitleColor=e.target.value||'#ffffff'; if(!running) drawStatic(); });
+  els.subtitleSideOpacity.addEventListener('input', e=>{ subtitleSideOpacity=(Number(e.target.value)||42)/100; if(!running) drawStatic(); });
+  audio.addEventListener('timeupdate', ()=>updateLyricUi(getActiveLyricIndex(audio.currentTime || 0)));
+  audio.addEventListener('seeked', ()=>updateLyricUi(getActiveLyricIndex(audio.currentTime || 0)));
 
   // ---------- file loading ----------
   function wireDrop(drop, input, handler){
@@ -508,6 +863,7 @@
 
   wireDrop(els.imgDrop, els.imgInput, loadImage);
   wireDrop(els.audioDrop, els.audioInput, loadAudio);
+  wireDrop(els.lyricFileDrop, els.lyricFileInput, loadLyricFile);
   wireMultiDrop(els.overlayDrop, els.overlayInput, loadOverlayFiles);
 
   function wireMultiDrop(drop, input, handler){
@@ -660,6 +1016,14 @@
   document.getElementById('particleChip').addEventListener('click', function(){ particles=!particles; this.classList.toggle('on',particles); });
   els.eqRingChip.addEventListener('click', function(){ eqRing=!eqRing; this.classList.toggle('on',eqRing); if(!running) drawStatic(); });
   els.eqRingIntensity.addEventListener('input', e=>{ eqRingIntensity=+e.target.value; if(!running) drawStatic(); });
+  els.eqRingSensitivity.addEventListener('input', e=>{ eqRingSensitivity=+e.target.value; if(!running) drawStatic(); });
+  els.frequencyPulseChip.addEventListener('click', function(){
+    frequencyPulse=!frequencyPulse;
+    this.classList.toggle('on',frequencyPulse);
+    this.textContent=frequencyPulse?'주파수 링 켜기':'주파수 링 끄기';
+    if(!running) drawStatic();
+  });
+  els.frequencyPulseIntensity.addEventListener('input', e=>{ frequencyPulseIntensity=+e.target.value; if(!running) drawStatic(); });
   els.titleInput.addEventListener('compositionstart', ()=>{ titleComposing=true; });
   els.titleInput.addEventListener('compositionend', e=>{
     titleComposing=false;
@@ -1094,24 +1458,30 @@
     const rotation = (mainImageMode==='disc' && mainImageSpin) ? getRenderTime() * (0.35 + (mainImageSpinSpeed/100)*3.4) : 0;
     return { cx, cy, w, h, rotation, x:cx-w/2, y:cy-h/2, radius: rounded ? Math.min(w,h)*0.05 : 0 };
   }
+  function getDiscHoleRadius(m){ return Math.max(12, m.w*0.065); }
+  function makeDonutPath(cx,cy,outerR,innerR){
+    const path = new Path2D();
+    path.arc(cx,cy,outerR,0,Math.PI*2,false);
+    path.arc(cx,cy,innerR,0,Math.PI*2,true);
+    return path;
+  }
   function drawMainImage(im, m){
     if(!im || !m) return;
     if(mainImageMode==='disc'){
-      const holeR = Math.max(12, m.w*0.065);
+      const holeR = getDiscHoleRadius(m);
       ctx.save();
       ctx.translate(m.cx,m.cy);
       ctx.rotate(m.rotation);
-      ctx.beginPath(); ctx.arc(0,0,m.w/2,0,Math.PI*2); ctx.clip();
+      const discPath = makeDonutPath(0,0,m.w/2,holeR);
+      ctx.clip(discPath,'evenodd');
       drawImageCoverPan(im, -m.w/2, -m.h/2, m.w, m.h, 0, mainImageZoom, mainImageCropX, mainImageCropY);
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath(); ctx.arc(0,0,holeR,0,Math.PI*2); ctx.fill();
       ctx.restore();
       ctx.save();
       ctx.translate(m.cx,m.cy);
       ctx.strokeStyle='rgba(255,255,255,0.22)';
       ctx.lineWidth=Math.max(2,m.w*0.01);
       ctx.beginPath(); ctx.arc(0,0,m.w*0.47,0,Math.PI*2); ctx.stroke();
-      ctx.strokeStyle='rgba(255,255,255,0.42)';
+      ctx.strokeStyle='rgba(255,255,255,0.52)';
       ctx.lineWidth=Math.max(1.5,m.w*0.006);
       ctx.beginPath(); ctx.arc(0,0,holeR,0,Math.PI*2); ctx.stroke();
       ctx.restore();
@@ -1344,7 +1714,10 @@
     for(let i=0;i<bars;i++){
       const half = i < bars/2 ? i : (bars-1-i);
       const raw = isStatic ? 0.05 : logBandValue(half, bars/2, 55, 12000);
-      const v = Math.pow(raw, 1.4);
+      const sensitivity = Math.max(0,Math.min(1,eqRingSensitivity/100));
+      const contrast = 0.38 + sensitivity*3.15;
+      const shaped = Math.max(0,Math.min(1,0.17 + (raw-0.17)*contrast));
+      const v = Math.pow(shaped, 1.22);
       const ang = (i/bars)*Math.PI*2 - Math.PI/2;
       const len = 6 + v*(60 + intensity*220);
       const c = Math.cos(ang), s = Math.sin(ang);
@@ -1355,6 +1728,43 @@
       ctx.lineTo(c*(r0+len), s*(r0+len));
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  function drawFrequencyPulseRing(cx,cy,cardW,cardH,isStatic){
+    if(!frequencyPulse) return;
+    const intensity = Math.max(0,Math.min(1,frequencyPulseIntensity/100));
+    if(intensity<=0) return;
+    const disc = mainImageMode==='disc' && Math.abs(cardW-cardH)<1;
+    const baseR = (disc ? cardW/2 : Math.hypot(cardW,cardH)/2) + 24 + intensity*18;
+    const loudGate = isStatic ? 0 : Math.max(0,Math.min(1,(glowEnvelope*0.95 + smEnergy*1.35 - 0.22) / 0.78));
+    const active = Math.pow(loudGate,1.8);
+    const maxAmp = (14 + intensity*92) * active;
+    const points = 220;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+    ctx.strokeStyle=acc(0.28 + intensity*0.42 + active*0.22);
+    ctx.lineWidth=1.7 + intensity*2.8 + active*1.6;
+    ctx.shadowColor=acc(0.28 + active*0.35);
+    ctx.shadowBlur=8 + intensity*14 + active*18;
+    ctx.beginPath();
+    for(let i=0;i<=points;i++){
+      const p=i/points;
+      const angle=p*Math.PI*2-Math.PI/2;
+      let wave=0;
+      if(!isStatic && timeData?.length){
+        const idx=Math.min(timeData.length-1,Math.floor(p*(timeData.length-1)));
+        wave=(timeData[idx]-128)/128;
+      }
+      const heartbeat = Math.sin(angle*2 + getRenderTime()*5.5)*smBass*0.18;
+      const radius=baseR + (wave*0.92 + heartbeat)*maxAmp;
+      const x=Math.cos(angle)*radius, y=Math.sin(angle)*radius;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -1426,6 +1836,63 @@
         }
       }
     }
+  }
+
+  function rgbaFromHex(hex,alpha){
+    const value=String(hex||'#ffffff').replace('#','');
+    const full=value.length===3 ? value.split('').map(ch=>ch+ch).join('') : value.padEnd(6,'f').slice(0,6);
+    const r=parseInt(full.slice(0,2),16), g=parseInt(full.slice(2,4),16), b=parseInt(full.slice(4,6),16);
+    return `rgba(${r},${g},${b},${Math.max(0,Math.min(1,alpha))})`;
+  }
+
+  function fitSubtitleFont(text,basePx,weight){
+    let px=Math.max(12,basePx);
+    const stack=getTitleFontStack('default');
+    ctx.font=`${weight} ${px}px ${stack}`;
+    const maxWidth=W*0.86;
+    while(px>12 && ctx.measureText(text).width>maxWidth){
+      px*=0.94;
+      ctx.font=`${weight} ${px}px ${stack}`;
+    }
+    return px;
+  }
+
+  function drawSubtitleLine(text,y,basePx,alpha,weight){
+    if(!text) return;
+    const px=fitSubtitleFont(text,basePx,weight);
+    ctx.font=`${weight} ${px}px ${getTitleFontStack('default')}`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillStyle=rgbaFromHex(subtitleColor,alpha);
+    if(subtitleShadow){
+      ctx.shadowColor=`rgba(0,0,0,${0.82*alpha})`;
+      ctx.shadowBlur=Math.max(8,px*0.24);
+      ctx.shadowOffsetY=Math.max(2,px*0.06);
+    }else{
+      ctx.shadowColor='rgba(0,0,0,0)';
+      ctx.shadowBlur=0;
+      ctx.shadowOffsetY=0;
+    }
+    ctx.fillText(text,W/2,y);
+  }
+
+  function drawSubtitles(isStatic){
+    if(!subtitlesEnabled || !lyricLines.length) return;
+    let index;
+    if(!isStatic || running || isRecording) index=getActiveLyricIndex(audio.currentTime||0);
+    else if(activeMode==='subtitle') index=cueCursor>=0 ? cueCursor : (cueLogs.length ? getActiveLyricIndex(audio.currentTime||0) : 0);
+    else index=getActiveLyricIndex(audio.currentTime||0);
+    if(index<0 || !lyricLines[index]) return;
+    const scale=H/1080;
+    const currentPx=Math.max(18,subtitleFontSize*scale);
+    const sidePx=currentPx*0.70;
+    const gap=currentPx*1.13;
+    const y=subtitleYRatio*H;
+    ctx.save();
+    drawSubtitleLine(lyricLines[index-1]||'',y-gap,sidePx,subtitleSideOpacity,650);
+    drawSubtitleLine(lyricLines[index],y,currentPx,1,850);
+    drawSubtitleLine(lyricLines[index+1]||'',y+gap,sidePx,subtitleSideOpacity,650);
+    ctx.restore();
   }
 
   // ---------- render ----------
@@ -1555,6 +2022,7 @@
 
     // 이퀄라이저 링 (썸네일 주변 파장)
     drawEqRing(cx, cy, cardW, cardH, isStatic);
+    drawFrequencyPulseRing(cx, cy, cardW, cardH, isStatic);
 
     drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
 
@@ -1595,7 +2063,8 @@
           ctx.shadowBlur = rimGlowAmt*14 + pulse*240 + boom*140;
           ctx.fillStyle='#000';
           if(mainImageMode==='disc'){
-            ctx.beginPath(); ctx.arc(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,0,Math.PI*2); ctx.fill();
+            const silhouette = makeDonutPath(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,getDiscHoleRadius(mainMetrics));
+            ctx.fill(silhouette,'evenodd');
           }else{
             roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius); ctx.fill();
           }
@@ -1666,6 +2135,8 @@
     }else{
       titleBounds=null;
     }
+
+    drawSubtitles(isStatic);
   }
 
   function loop(){
@@ -1791,6 +2262,9 @@
   refreshBgUI();
   updateOverlayList();
   updateStickerControlState();
+  updateCueTable();
+  updateLyricUi(-1);
+  setMode('video');
   applyCanvasResolution(getRecordPreset());
   drawStatic();
 })();
