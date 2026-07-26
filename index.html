@@ -136,6 +136,7 @@
   .cue-table tr:last-child td{border-bottom:0}
   .cue-table input[type=number]{width:100px;padding:7px 8px;font-variant-numeric:tabular-nums}
   .cue-table .lyric-cell{max-width:640px;word-break:keep-all;overflow-wrap:anywhere}
+  .cue-end-note{margin-top:4px;font-size:10px;color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
   .mini-act{border:1px solid var(--panel-line);background:#fff;color:var(--ink);border-radius:7px;padding:6px 9px;font:700 11px/1 inherit;cursor:pointer}
   .empty-log{padding:18px;text-align:center;color:var(--ink-dim)}
 
@@ -457,8 +458,8 @@
   <section class="subtitle-panel" id="subtitlePanel" data-panel="subtitle" hidden>
     <div class="card">
       <h3>가사 · 자막 입력</h3>
-      <div class="drop" id="lyricFileDrop">📄 <b>가사 파일</b> 클릭 또는 드래그 <small>(txt · lrc)</small><div class="filename" id="lyricFileName"></div></div>
-      <input type="file" id="lyricFileInput" accept=".txt,.lrc,text/plain" hidden>
+      <div class="drop" id="lyricFileDrop">📄 <b>가사 · 자막 파일</b> 클릭 또는 드래그 <small>(txt · lrc · srt)</small><div class="filename" id="lyricFileName"></div></div>
+      <input type="file" id="lyricFileInput" accept=".txt,.lrc,.srt,text/plain,application/x-subrip" hidden>
       <div style="height:12px"></div>
       <div class="field">
         <label class="lbl">가사 형식</label>
@@ -480,7 +481,7 @@ Hikari no saki e
         <button type="button" class="act ghost" id="applyLyricsBtn">가사 반영</button>
         <button type="button" class="act ghost" id="resetLyricBtn">타이밍 로그 초기화</button>
       </div>
-      <div class="helper-text" id="lyricFileHelper">LRC 파일은 들어 있는 시간값을 자동으로 읽고, TXT는 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
+      <div class="helper-text" id="lyricFileHelper">SRT·LRC 파일은 들어 있는 시간값을 자동 적용하고, TXT는 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
     </div>
 
     <div class="card">
@@ -731,10 +732,62 @@ Hikari no saki e
     return `${String(min).padStart(2,'0')}:${sec.toFixed(2).padStart(5,'0')}`;
   }
 
-  // 가사 파싱: 한줄가사는 비어 있지 않은 각 줄을 하나의 큐로,
-  // 두줄가사는 원어+번역 두 줄을 하나의 큐로 묶어요.
+  // SRT 시간 문자열을 초 단위로 변환해요.
+  function parseSrtTimestamp(value){
+    const match = String(value || '').trim().match(/^(\d{1,3}):(\d{2}):(\d{2})[,.](\d{1,3})$/);
+    if(!match) return null;
+    const hour = Number(match[1]) || 0;
+    const min = Number(match[2]) || 0;
+    const sec = Number(match[3]) || 0;
+    const ms = Number(String(match[4]).padEnd(3,'0').slice(0,3)) || 0;
+    if(min > 59 || sec > 59) return null;
+    return hour * 3600 + min * 60 + sec + ms / 1000;
+  }
+
+  // SRT는 가사와 시작·종료 시간을 함께 읽어요.
+  function parseSrtText(raw){
+    const text = String(raw || '').replace(/^\uFEFF/,'').replace(/\r/g,'').trim();
+    const blocks = text ? text.split(/\n\s*\n+/) : [];
+    const lines = [];
+    const cues = [];
+    let invalidBlocks = 0;
+
+    blocks.forEach(block=>{
+      const rows = block.split('\n').map(line=>line.trim());
+      const timingIndex = rows.findIndex(line=>line.includes('-->'));
+      if(timingIndex < 0){ invalidBlocks++; return; }
+      const timing = rows[timingIndex].match(/^(\d{1,3}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,3}:\d{2}:\d{2}[,.]\d{1,3})(?:\s+.*)?$/);
+      if(!timing){ invalidBlocks++; return; }
+      const start = parseSrtTimestamp(timing[1]);
+      const end = parseSrtTimestamp(timing[2]);
+      if(start===null || end===null || end<=start){ invalidBlocks++; return; }
+
+      const subtitleRows = rows.slice(timingIndex+1)
+        .map(line=>line.replace(/\{\\[^}]+\}/g,'').replace(/<[^>]+>/g,'').trim())
+        .filter(Boolean);
+      if(!subtitleRows.length){ invalidBlocks++; return; }
+
+      const index = lines.length;
+      lines.push({a:subtitleRows[0] || '', b:subtitleRows.slice(1).join(' ').trim()});
+      cues.push({index, time:start, endTime:end});
+    });
+
+    return {
+      lines,
+      cues,
+      sourceType:'srt',
+      invalidBlocks,
+      detectedMode:lines.some(line=>line.b) ? 'double' : 'single'
+    };
+  }
+
+  // 가사 파싱: SRT/LRC는 내장 타이밍을 적용하고,
+  // TXT는 선택한 한줄·두줄 형식에 따라 읽어요.
   function parseLyricText(raw){
-    const text = String(raw || '').replace(/\r/g,'');
+    const text = String(raw || '').replace(/^\uFEFF/,'').replace(/\r/g,'');
+    const looksLikeSrt = /(?:^|\n)\s*(?:\d+\s*\n\s*)?\d{1,3}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,3}:\d{2}:\d{2}[,.]\d{1,3}/m.test(text);
+    if(looksLikeSrt) return parseSrtText(text);
+
     const hasLrc = /\[\d{1,2}:\d{2}/.test(text);
     if(hasLrc){
       const entries = [];
@@ -767,7 +820,7 @@ Hikari no saki e
           }
         }
       }
-      return {lines, cues};
+      return {lines, cues, sourceType:'lrc'};
     }
 
     const rawLines = text.split('\n');
@@ -777,7 +830,7 @@ Hikari no saki e
         const value=line.trim();
         if(value) lines.push({a:value, b:''});
       });
-      return {lines, cues:[]};
+      return {lines, cues:[], sourceType:'txt'};
     }
 
     const blocks = text.split(/\n\s*\n/).map(block=>block.split('\n').map(line=>line.trim()).filter(Boolean)).filter(block=>block.length);
@@ -793,7 +846,7 @@ Hikari no saki e
         lines.push({a:compact[i]||'', b:compact[i+1]||''});
       }
     }
-    return {lines, cues:[]};
+    return {lines, cues:[], sourceType:'txt'};
   }
 
   function updateLyricModeUi(){
@@ -811,8 +864,8 @@ Hikari no saki e
     }
     if(els.lyricFileHelper){
       els.lyricFileHelper.textContent = isDouble
-        ? 'LRC는 같은 시간의 두 줄을 원어/번역으로 합치고, TXT는 원어+번역 두 줄을 한 가사로 묶어요.'
-        : 'LRC는 타임태그가 붙은 각 줄을 하나의 가사로 읽고, TXT는 각 줄의 시간을 직접 찍어요.';
+        ? 'SRT는 시작·종료 시간과 원어/번역을 그대로 적용하고, LRC는 같은 시간의 두 줄을 합쳐요. TXT는 두 줄씩 묶어요.'
+        : 'SRT·LRC는 파일의 시간값을 자동 적용하고, TXT는 각 줄의 시간을 직접 찍어요.';
     }
     if(els.lyricsInput){
       els.lyricsInput.placeholder = isDouble
@@ -842,6 +895,10 @@ Hikari no saki e
 
   function applyLyricsFromInput(){
     const parsed = parseLyricText(els.lyricsInput.value);
+    if(parsed.detectedMode && parsed.detectedMode!==lyricMode){
+      lyricMode = parsed.detectedMode;
+      updateLyricModeUi();
+    }
     lyricLines = parsed.lines;
     cueLogs = parsed.cues;
     cueCursor = -1;
@@ -849,9 +906,16 @@ Hikari no saki e
     updateCueTable();
     updateLyricUi(resolveLyricPreviewIndex());
     if(lyricLines.length){
-      setStatus(cueLogs.length ? `LRC 시간값 <b>${cueLogs.length}개</b>를 불러왔어요. 숫자는 자막 로그에서 직접 수정할 수 있어요.` : `가사 <b>${lyricLines.length}줄</b>을 반영했어요. 노래를 재생하며 다음 줄 버튼을 눌러 타이밍을 찍어주세요.`);
+      if(parsed.sourceType==='srt'){
+        const skipped = parsed.invalidBlocks ? ` 형식이 잘못된 ${parsed.invalidBlocks}개 항목은 건너뛰었어요.` : '';
+        setStatus(`SRT 자막 <b>${cueLogs.length}개</b>와 시작·종료 시간을 적용했어요.${skipped} 로그의 시작 시간은 직접 수정할 수 있어요.`);
+      }else if(parsed.sourceType==='lrc'){
+        setStatus(`LRC 시간값 <b>${cueLogs.length}개</b>를 불러왔어요. 숫자는 자막 로그에서 직접 수정할 수 있어요.`);
+      }else{
+        setStatus(`가사 <b>${lyricLines.length}줄</b>을 반영했어요. 노래를 재생하며 다음 줄 버튼을 눌러 타이밍을 찍어주세요.`);
+      }
     }else{
-      setStatus('가사를 한 줄 이상 입력해 주세요.');
+      setStatus(parsed.sourceType==='srt' ? '올바른 SRT 자막 항목을 찾지 못했어요. 번호, 시간 줄, 자막 본문을 확인해 주세요.' : '가사를 한 줄 이상 입력해 주세요.');
     }
     if(!running) drawStatic();
   }
@@ -859,8 +923,11 @@ Hikari no saki e
   function loadLyricFile(file){
     els.lyricFileName.textContent = file.name;
     const reader = new FileReader();
-    reader.onload = ()=>{ els.lyricsInput.value = String(reader.result || ''); applyLyricsFromInput(); };
-    reader.onerror = ()=>setStatus('가사 파일을 읽지 못했어요. UTF-8 TXT 또는 LRC 파일인지 확인해 주세요.');
+    reader.onload = ()=>{
+      els.lyricsInput.value = String(reader.result || '').replace(/^\uFEFF/,'');
+      applyLyricsFromInput();
+    };
+    reader.onerror = ()=>setStatus('가사 파일을 읽지 못했어요. UTF-8 TXT, LRC 또는 SRT 파일인지 확인해 주세요.');
     reader.readAsText(file, 'UTF-8');
   }
 
@@ -872,7 +939,11 @@ Hikari no saki e
   function getActiveLyricIndex(time){
     let active = -1;
     const sorted = cueLogs.slice().sort((a,b)=>a.time-b.time || a.index-b.index);
-    for(const cue of sorted){ if(cue.time <= time + 0.01) active = cue.index; else break; }
+    for(const cue of sorted){
+      if(cue.time > time + 0.01) break;
+      const endTime = Number(cue.endTime);
+      active = Number.isFinite(endTime) && time > endTime + 0.01 ? -1 : cue.index;
+    }
     return active;
   }
   function resolveLyricPreviewIndex(){
@@ -904,7 +975,10 @@ Hikari no saki e
     }
     const rows = cueLogs.slice().sort((a,b)=>a.index-b.index).map(cue=>{
       const lyric = cueText(lyricLines[cue.index]);
-      return `<tr data-index="${cue.index}"><td>${cue.index+1}</td><td><input type="number" class="cue-time" min="0" step="0.01" value="${cue.time.toFixed(2)}" aria-label="${cue.index+1}번 가사 시작 시간"></td><td class="lyric-cell">${escapeHtml(lyric)}</td><td><button type="button" class="mini-act cue-now">현재시간</button></td></tr>`;
+      const importedEnd = Number(cue.endTime);
+      const endNote = Number.isFinite(importedEnd) && importedEnd > cue.time
+        ? `<div class="cue-end-note">종료 ${formatTime(importedEnd)}</div>` : '';
+      return `<tr data-index="${cue.index}"><td>${cue.index+1}</td><td><input type="number" class="cue-time" min="0" step="0.01" value="${cue.time.toFixed(2)}" aria-label="${cue.index+1}번 가사 시작 시간">${endNote}</td><td class="lyric-cell">${escapeHtml(lyric)}</td><td><button type="button" class="mini-act cue-now">현재시간</button></td></tr>`;
     }).join('');
     els.cueLogBody.innerHTML = rows;
   }
@@ -941,8 +1015,11 @@ Hikari no saki e
     const blocks = validCues.map((cue, position)=>{
       const start = cue.time;
       let end;
+      const sourceCue = getCueByIndex(cue.index);
+      const importedEnd = Number(sourceCue?.endTime);
       const next = validCues[position+1];
-      if(next && next.time > start + 0.02) end = Math.max(start + 0.01, next.time - 0.01);
+      if(Number.isFinite(importedEnd) && importedEnd > start + 0.01) end = importedEnd;
+      else if(next && next.time > start + 0.02) end = Math.max(start + 0.01, next.time - 0.01);
       else if(next) end = start + 0.5;
       else if(duration > start + 0.05) end = duration;
       else end = start + 3;
@@ -1009,6 +1086,7 @@ Hikari no saki e
     const cue = getCueByIndex(index);
     if(!cue) return;
     cue.time = Math.max(0, Number(input.value) || 0);
+    if(Number.isFinite(Number(cue.endTime)) && Number(cue.endTime) <= cue.time + 0.01) delete cue.endTime;
     input.value = cue.time.toFixed(2);
     updateLyricUi(resolveLyricPreviewIndex());
     if(!running) drawStatic();
@@ -1021,6 +1099,7 @@ Hikari no saki e
     const cue = getCueByIndex(index);
     if(!cue) return;
     cue.time = Math.max(0, audio.currentTime || 0);
+    delete cue.endTime;
     cueCursor = index;
     updateCueTable(); updateLyricUi(index);
     if(!running) drawStatic();
