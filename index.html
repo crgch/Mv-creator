@@ -45,6 +45,13 @@
   .empty-hint .big{font-size:16px;color:var(--ink)}
   .empty-hint.hide{display:none}
 
+  .seek-bar{width:min(100%,1120px);margin:10px auto 0;display:flex;align-items:center;gap:12px}
+  .seek-bar .seek-time{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums;min-width:66px;text-align:center}
+  .seek-bar input[type=range]{flex:1;min-width:0;accent-color:var(--accent);cursor:pointer}
+  .seek-mini{width:42px;height:42px;border-radius:11px;border:1px solid var(--panel-line);background:#fff;color:var(--accent);font-size:15px;font-weight:800;cursor:pointer;flex:0 0 auto;transition:.15s}
+  .seek-mini:hover:not(:disabled){border-color:var(--accent);background:rgba(138,82,255,.08)}
+  .seek-mini:disabled{opacity:.4;cursor:not-allowed}
+
   .controls{width:min(100%,1120px);margin:16px auto 0;column-count:2;column-gap:12px}
   .control-column{display:contents}
   .equalizer-card{min-width:0}
@@ -110,8 +117,10 @@
   .lyric-line-box{border:1px solid var(--panel-line);border-radius:10px;background:#fafafd;padding:10px 12px;min-height:48px;display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:10px}
   .lyric-line-box .tag{font-size:10px;letter-spacing:.06em;color:var(--ink-dim);font-weight:800}
   .lyric-line-box .text{font-size:13px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
+  .lyric-line-box .text .trans{display:block;opacity:.72;font-weight:600;margin-top:2px}
   .lyric-line-box.current{border-color:rgba(138,82,255,.55);background:rgba(138,82,255,.08)}
   .lyric-line-box.current .text{font-size:15px;font-weight:800;color:#5d2fd2}
+  .lyric-line-box.current .text .trans{color:#6b46c9;font-size:13px}
   .timing-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;margin-top:12px}
   .time-display{border:1px solid var(--panel-line);border-radius:10px;background:#fafafd;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--ink-dim)}
   .time-display b{font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -202,6 +211,13 @@
       <div class="preview-note">원본 이미지가 작으면 해상도를 올려도 선명도가 제한될 수 있어요.</div>
       <div class="status" id="status">이미지와 mp3를 넣으면 재생 버튼이 켜져요.</div>
     </aside>
+  </div>
+
+  <div class="seek-bar">
+    <button type="button" class="seek-mini" id="seekToggle" disabled aria-label="재생/일시정지">▶</button>
+    <span class="seek-time" id="seekCur">00:00.00</span>
+    <input type="range" id="seekBar" min="0" max="1000" value="0" step="1" disabled aria-label="재생 위치 이동">
+    <span class="seek-time" id="seekDur">00:00.00</span>
   </div>
 
   <div class="controls" id="videoPanel" data-panel="video">
@@ -442,16 +458,20 @@
       <input type="file" id="lyricFileInput" accept=".txt,.lrc,text/plain" hidden>
       <div style="height:12px"></div>
       <div class="field">
-        <label class="lbl">한 줄에 한 가사씩 입력</label>
-        <textarea id="lyricsInput" placeholder="첫 번째 가사
-두 번째 가사
-세 번째 가사"></textarea>
+        <label class="lbl">한 가사 = 한 칸. 외국어 노래는 원문 아래 줄에 번역을 쓰고, 가사끼리는 빈 줄로 구분해요.</label>
+        <textarea id="lyricsInput" placeholder="Kimi no koe ga kikoeru
+너의 목소리가 들려
+
+Yoru wo koete
+밤을 넘어서
+
+(번역이 없으면 한 줄만 쓰고 빈 줄로 구분하면 돼요)"></textarea>
       </div>
       <div class="btns">
         <button type="button" class="act ghost" id="applyLyricsBtn">가사 반영</button>
         <button type="button" class="act ghost" id="resetLyricBtn">타이밍 로그 초기화</button>
       </div>
-      <div class="helper-text">LRC 파일은 들어 있는 시간값을 자동으로 읽고, TXT 파일은 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
+      <div class="helper-text">LRC 파일은 들어 있는 시간값을 자동으로 읽고(같은 시간의 두 줄은 원문/번역으로 합쳐요), TXT는 재생하면서 아래 버튼으로 시간을 직접 찍어요.</div>
     </div>
 
     <div class="card">
@@ -465,7 +485,7 @@
         <div class="time-display"><span>현재 재생시간</span><b id="currentTimeBadge">00:00.00</b></div>
         <button type="button" class="act next-lyric" id="nextLyricBtn">다음 줄 가사 적용</button>
       </div>
-      <div class="helper-text">노래를 재생한 뒤 가사가 시작되는 순간마다 버튼을 누르면, 그 시각이 로그에 기록되고 이전/지금/다음 가사가 자동으로 갱신돼요.</div>
+      <div class="helper-text">노래를 재생한 뒤 가사가 시작되는 순간마다 버튼을 누르면, 그 시각이 로그에 기록되고 이전/지금/다음 가사가 자동으로 갱신돼요. 아래 탐색 바로 원하는 시각으로 이동해 자막이 맞게 들어갔는지 확인할 수 있어요.</div>
       <div style="height:14px"></div>
       <h3>자막 스타일</h3>
       <div class="toggle-row">
@@ -494,6 +514,7 @@
           <input type="range" id="subtitleSideOpacity" min="10" max="90" value="42">
         </div>
       </div>
+      <div class="helper-text">미리보기의 자막을 직접 드래그해서 위치를 옮길 수 있어요. (좌우 가운데에 오면 살짝 붙어요)</div>
     </div>
 
     <div class="card timeline-card">
@@ -541,18 +562,19 @@
   let audioReady = false;
   let audioCtx, analyser, srcNode, freqData, timeData, streamDest;
   let running = false;
+  let seeking = false;
   let accent = {r:0x8a,g:0x52,b:0xff};
   let autoColor = true;
   let rounded = true;
   let particles = true;
-  let bgType = 'solid';          // solid | gradient | image
+  let bgType = 'solid';
   let bgSolidColor = '#0e0e14';
   let bgGradientColor1 = '#0e0e14';
   let bgGradientColor2 = '#3a1d6e';
-  let bgGradDir = 'diagonal';    // diagonal | horizontal | vertical | radial
+  let bgGradDir = 'diagonal';
   let bgImage = null;
   let bgDim = 35;
-  let smBass = 0, smMid = 0, smEnergy = 0; // smoothed values
+  let smBass = 0, smMid = 0, smEnergy = 0;
   let prevBass = 0, prevRms = 0;
   let glowEnvelope = 0;
   let loudFloor = 0.04, loudCeil = 0.20;
@@ -567,9 +589,9 @@
   let title = '';
   let titleColor = '#ffffff';
   let titleFont = 'default';
-  let titleFontSize = 56;       // 1080p 기준 픽셀 크기
-  let titleLetterSpacing = 0;   // 1080p 기준 자간
-  let titleX = 0.5, titleY = 0.88; // 해상도와 무관한 상대 좌표
+  let titleFontSize = 56;
+  let titleLetterSpacing = 0;
+  let titleX = 0.5, titleY = 0.88;
   let titleBounds = null;
   let titleDragging = false;
   let titleDragOffset = {x:0,y:0};
@@ -582,15 +604,19 @@
   let selectedOverlayId = null;
   let activeDrag = null;
   let activeMode = 'video';
-  let lyricLines = [];
+  let lyricLines = [];   // [{a, b}]
   let cueLogs = [];
   let cueCursor = -1;
   let subtitlesEnabled = true;
   let subtitleShadow = true;
   let subtitleFontSize = 52;
   let subtitleYRatio = 0.78;
+  let subtitleX = 0.5;
   let subtitleColor = '#ffffff';
   let subtitleSideOpacity = 0.42;
+  let subtitleBounds = null;
+  let subtitleDragging = false;
+  let subtitleDragOffset = {x:0,y:0};
 
   const els = {
     imgInput: document.getElementById('imgInput'),
@@ -606,6 +632,10 @@
     recBtn: document.getElementById('recBtn'),
     stopRecBtn: document.getElementById('stopRecBtn'),
     recordQuality: document.getElementById('recordQuality'),
+    seekToggle: document.getElementById('seekToggle'),
+    seekBar: document.getElementById('seekBar'),
+    seekCur: document.getElementById('seekCur'),
+    seekDur: document.getElementById('seekDur'),
     colorInput: document.getElementById('colorInput'),
     autoColorChip: document.getElementById('autoColorChip'),
     starCount: document.getElementById('starCount'),
@@ -660,7 +690,7 @@
   };
 
   function setStatus(html){ statusEl.innerHTML = html; }
-  function setAccentVar(){ /* UI 색은 고정 유지 — 글로우 추출색이 UI 텍스트를 흐리게 만들지 않도록 */ }
+  function setAccentVar(){ /* UI 색 고정 */ }
 
   function setMode(mode){
     activeMode = mode === 'subtitle' ? 'subtitle' : 'video';
@@ -674,7 +704,6 @@
     updateLyricUi(resolveLyricPreviewIndex());
     if(!running) drawStatic();
   }
-
   document.querySelectorAll('.mode-tab').forEach(btn=>btn.addEventListener('click', ()=>setMode(btn.dataset.mode)));
 
   function formatTime(seconds){
@@ -684,33 +713,55 @@
     return `${String(min).padStart(2,'0')}:${sec.toFixed(2).padStart(5,'0')}`;
   }
 
+  // 가사 파싱: 각 큐는 {a:원문, b:번역}. 빈 줄로 큐를 구분하고, 큐 안 2번째 줄은 번역.
   function parseLyricText(raw){
-    const timed = [];
-    const plain = [];
-    String(raw || '').replace(/\r/g,'').split('\n').forEach(line=>{
-      const timeTags = Array.from(line.matchAll(/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g));
-      const cleaned = line.replace(/\[[^\]]+\]/g,'').trim();
-      if(!cleaned) return;
-      if(timeTags.length){
-        timeTags.forEach(match=>{
-          const min = Number(match[1]) || 0;
-          const sec = Number(match[2]) || 0;
-          const fractionRaw = match[3] || '';
-          const fraction = fractionRaw ? Number(fractionRaw) / Math.pow(10, fractionRaw.length) : 0;
-          timed.push({text:cleaned, time:min*60 + sec + fraction});
+    const text = String(raw || '').replace(/\r/g,'');
+    const hasLrc = /\[\d{1,2}:\d{2}/.test(text);
+    if(hasLrc){
+      const entries = [];
+      text.split('\n').forEach(line=>{
+        const tags = Array.from(line.matchAll(/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g));
+        const cleaned = line.replace(/\[[^\]]+\]/g,'').trim();
+        if(!cleaned || !tags.length) return;
+        tags.forEach(m=>{
+          const min = Number(m[1])||0, sec = Number(m[2])||0;
+          const fr = m[3] ? Number(m[3])/Math.pow(10,m[3].length) : 0;
+          entries.push({time:min*60+sec+fr, text:cleaned});
         });
-      }else{
-        plain.push(cleaned);
+      });
+      entries.sort((a,b)=>a.time-b.time);
+      const lines = [], cues = [];
+      for(let i=0;i<entries.length;i++){
+        const cur = entries[i];
+        const last = lines[lines.length-1];
+        if(last && !last.b && cues.length && Math.abs(cur.time - cues[cues.length-1].time) < 0.03){
+          last.b = cur.text;
+        }else{
+          cues.push({index:lines.length, time:cur.time});
+          lines.push({a:cur.text, b:''});
+        }
       }
-    });
-    if(timed.length){
-      timed.sort((a,b)=>a.time-b.time);
-      return {
-        lines: timed.map(item=>item.text),
-        cues: timed.map((item,index)=>({index,time:item.time}))
-      };
+      return {lines, cues};
     }
-    return {lines:plain,cues:[]};
+    const rawLines = text.split('\n');
+    const hasBlank = rawLines.some(l=>l.trim()==='');
+    const lines = [];
+    if(hasBlank){
+      let block = [];
+      const flush = ()=>{
+        if(block.length){
+          const a = block[0].trim();
+          const b = block.slice(1).join(' ').trim();
+          if(a || b) lines.push({a, b});
+        }
+        block = [];
+      };
+      rawLines.forEach(l=>{ if(l.trim()==='') flush(); else block.push(l); });
+      flush();
+    }else{
+      rawLines.forEach(l=>{ const t=l.trim(); if(t) lines.push({a:t, b:''}); });
+    }
+    return {lines, cues:[]};
   }
 
   function applyLyricsFromInput(){
@@ -732,50 +783,47 @@
   function loadLyricFile(file){
     els.lyricFileName.textContent = file.name;
     const reader = new FileReader();
-    reader.onload = ()=>{
-      els.lyricsInput.value = String(reader.result || '');
-      applyLyricsFromInput();
-    };
+    reader.onload = ()=>{ els.lyricsInput.value = String(reader.result || ''); applyLyricsFromInput(); };
     reader.onerror = ()=>setStatus('가사 파일을 읽지 못했어요. UTF-8 TXT 또는 LRC 파일인지 확인해 주세요.');
     reader.readAsText(file, 'UTF-8');
   }
 
   function getCueByIndex(index){ return cueLogs.find(cue=>cue.index===index) || null; }
-
   function getActiveLyricIndex(time){
     let active = -1;
     const sorted = cueLogs.slice().sort((a,b)=>a.time-b.time || a.index-b.index);
-    for(const cue of sorted){
-      if(cue.time <= time + 0.01) active = cue.index;
-      else break;
-    }
+    for(const cue of sorted){ if(cue.time <= time + 0.01) active = cue.index; else break; }
     return active;
   }
-
   function resolveLyricPreviewIndex(){
     if(running || isRecording) return getActiveLyricIndex(audio.currentTime || 0);
     if(cueCursor >= 0) return cueCursor;
     if(cueLogs.length) return getActiveLyricIndex(audio.currentTime || 0);
     return -1;
   }
-
+  function cueText(cue){ return cue ? (cue.a || '') + (cue.b ? ' / ' + cue.b : '') : ''; }
+  function cueHtml(cue){
+    if(!cue) return '—';
+    const a = escapeHtml(cue.a || '');
+    const b = cue.b ? `<span class="trans">${escapeHtml(cue.b)}</span>` : '';
+    return (a || '—') + b;
+  }
   function updateLyricUi(index=resolveLyricPreviewIndex()){
-    const prev = index > 0 ? lyricLines[index-1] : '';
-    const current = index >= 0 ? lyricLines[index] : '';
+    const prev = index > 0 ? lyricLines[index-1] : null;
+    const current = index >= 0 ? lyricLines[index] : null;
     const next = index >= 0 ? lyricLines[index+1] : lyricLines[0];
-    els.lyricPrev.textContent = prev || '—';
-    els.lyricCurrent.textContent = current || '아직 적용된 가사 없음';
-    els.lyricNext.textContent = next || '—';
+    els.lyricPrev.innerHTML = cueHtml(prev);
+    els.lyricCurrent.innerHTML = current ? cueHtml(current) : '아직 적용된 가사 없음';
+    els.lyricNext.innerHTML = cueHtml(next);
     els.currentTimeBadge.textContent = formatTime(audio.currentTime || 0);
   }
-
   function updateCueTable(){
     if(!cueLogs.length){
       els.cueLogBody.innerHTML = '<tr><td colspan="4" class="empty-log">아직 기록된 타이밍이 없어요.</td></tr>';
       return;
     }
     const rows = cueLogs.slice().sort((a,b)=>a.index-b.index).map(cue=>{
-      const lyric = lyricLines[cue.index] || '';
+      const lyric = cueText(lyricLines[cue.index]);
       return `<tr data-index="${cue.index}"><td>${cue.index+1}</td><td><input type="number" class="cue-time" min="0" step="0.01" value="${cue.time.toFixed(2)}" aria-label="${cue.index+1}번 가사 시작 시간"></td><td class="lyric-cell">${escapeHtml(lyric)}</td><td><button type="button" class="mini-act cue-now">현재시간</button></td></tr>`;
     }).join('');
     els.cueLogBody.innerHTML = rows;
@@ -783,10 +831,8 @@
 
   els.applyLyricsBtn.addEventListener('click', applyLyricsFromInput);
   els.resetLyricBtn.addEventListener('click', ()=>{
-    cueLogs = [];
-    cueCursor = -1;
-    updateCueTable();
-    updateLyricUi(-1);
+    cueLogs = []; cueCursor = -1;
+    updateCueTable(); updateLyricUi(-1);
     setStatus('자막 타이밍 로그만 초기화했어요. 가사 내용은 그대로 남아 있어요.');
     if(!running) drawStatic();
   });
@@ -801,10 +847,8 @@
     cueCursor = nextIndex;
     const now = Math.max(0, audio.currentTime || 0);
     const existing = getCueByIndex(cueCursor);
-    if(existing) existing.time = now;
-    else cueLogs.push({index:cueCursor,time:now});
-    updateCueTable();
-    updateLyricUi(cueCursor);
+    if(existing) existing.time = now; else cueLogs.push({index:cueCursor, time:now});
+    updateCueTable(); updateLyricUi(cueCursor);
     setStatus(`<b>${cueCursor+1}번째 가사</b>를 ${formatTime(now)}에 적용했어요.`);
     if(!running) drawStatic();
   });
@@ -829,8 +873,7 @@
     if(!cue) return;
     cue.time = Math.max(0, audio.currentTime || 0);
     cueCursor = index;
-    updateCueTable();
-    updateLyricUi(index);
+    updateCueTable(); updateLyricUi(index);
     if(!running) drawStatic();
   });
   els.subtitlesEnabledChip.addEventListener('click', function(){
@@ -849,8 +892,8 @@
   els.subtitleY.addEventListener('input', e=>{ subtitleYRatio=(Number(e.target.value)||78)/100; if(!running) drawStatic(); });
   els.subtitleColor.addEventListener('input', e=>{ subtitleColor=e.target.value||'#ffffff'; if(!running) drawStatic(); });
   els.subtitleSideOpacity.addEventListener('input', e=>{ subtitleSideOpacity=(Number(e.target.value)||42)/100; if(!running) drawStatic(); });
-  audio.addEventListener('timeupdate', ()=>updateLyricUi(getActiveLyricIndex(audio.currentTime || 0)));
-  audio.addEventListener('seeked', ()=>updateLyricUi(getActiveLyricIndex(audio.currentTime || 0)));
+  audio.addEventListener('timeupdate', ()=>{ updateLyricUi(getActiveLyricIndex(audio.currentTime || 0)); updateSeekUi(); });
+  audio.addEventListener('seeked', ()=>{ updateLyricUi(getActiveLyricIndex(audio.currentTime || 0)); updateSeekUi(); });
 
   // ---------- file loading ----------
   function wireDrop(drop, input, handler){
@@ -860,12 +903,6 @@
     ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
     drop.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]); });
   }
-
-  wireDrop(els.imgDrop, els.imgInput, loadImage);
-  wireDrop(els.audioDrop, els.audioInput, loadAudio);
-  wireDrop(els.lyricFileDrop, els.lyricFileInput, loadLyricFile);
-  wireMultiDrop(els.overlayDrop, els.overlayInput, loadOverlayFiles);
-
   function wireMultiDrop(drop, input, handler){
     drop.addEventListener('click', ()=>input.click());
     input.addEventListener('change', e=>{ if(e.target.files?.length) handler(Array.from(e.target.files)); input.value=''; });
@@ -873,6 +910,10 @@
     ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
     drop.addEventListener('drop',e=>{ const files=Array.from(e.dataTransfer.files||[]); if(files.length) handler(files); });
   }
+  wireDrop(els.imgDrop, els.imgInput, loadImage);
+  wireDrop(els.audioDrop, els.audioInput, loadAudio);
+  wireDrop(els.lyricFileDrop, els.lyricFileInput, loadLyricFile);
+  wireMultiDrop(els.overlayDrop, els.overlayInput, loadOverlayFiles);
 
   function loadImage(file){
     els.imgName.textContent = file.name;
@@ -892,13 +933,17 @@
     };
     im.src = url;
   }
-
   function loadAudio(file){
     els.audioName.textContent = file.name;
     audio.src = URL.createObjectURL(file);
     audioReady = false;
     audio.load();
-    audio.addEventListener('loadedmetadata', ()=>{ audioReady = true; maybeEnable(); }, {once:true});
+    audio.addEventListener('loadedmetadata', ()=>{
+      audioReady = true; maybeEnable();
+      if(els.seekBar) els.seekBar.disabled = false;
+      if(els.seekToggle) els.seekToggle.disabled = false;
+      updateSeekUi();
+    }, {once:true});
   }
 
   function escapeHtml(text){
@@ -906,11 +951,7 @@
   }
   function updateOverlayList(){
     if(!els.overlayList) return;
-    if(!overlays.length){
-      els.overlayList.innerHTML = '<span class="muted">추가된 스티커 없음</span>';
-      updateStickerControlState();
-      return;
-    }
+    if(!overlays.length){ els.overlayList.innerHTML = '<span class="muted">추가된 스티커 없음</span>'; updateStickerControlState(); return; }
     els.overlayList.innerHTML = overlays.map((item, idx)=>`<span>${item.id===selectedOverlayId?'▶ ':''}${idx+1}. ${escapeHtml(item.name)}</span>`).join('');
     updateStickerControlState();
   }
@@ -918,28 +959,15 @@
     if(!files?.length) return;
     const room = Math.max(0, 5 - overlays.length);
     const accepted = files.slice(0, room);
-    if(files.length > room){
-      setStatus('꾸미기 PNG는 최대 <b>5개</b>까지 넣을 수 있어요. 먼저 들어온 파일부터 추가했어요.');
-    }
+    if(files.length > room){ setStatus('꾸미기 PNG는 최대 <b>5개</b>까지 넣을 수 있어요. 먼저 들어온 파일부터 추가했어요.'); }
     accepted.forEach(file=>{
       const url = URL.createObjectURL(file);
       const im = new Image();
       im.onload = ()=>{
         const defaultWidth = Math.min(0.24, Math.max(0.09, (Math.min(im.naturalWidth || 320, 460)) / 1920));
         const id = ++overlaySerial;
-        overlays.push({
-          id,
-          name:file.name,
-          img:im,
-          x:0.5,
-          y:0.5,
-          widthRatio:defaultWidth,
-          rotation:0,
-          anim:'none',
-          animSpeed:90
-        });
-        selectedOverlayId = id;
-        mainImageSelected = false;
+        overlays.push({id, name:file.name, img:im, x:0.5, y:0.5, widthRatio:defaultWidth, rotation:0, anim:'none', animSpeed:90});
+        selectedOverlayId = id; mainImageSelected = false;
         updateOverlayList();
         if(!running) drawStatic();
       };
@@ -974,7 +1002,6 @@
       if(els.selectedStickerHint) els.selectedStickerHint.textContent = '스티커를 선택하면 이동, 크기 조절, 회전, 삭제(X), 움직임 효과를 줄 수 있어요.';
     }
   }
-
   function maybeEnable(){
     const ok = img && audio.src;
     els.playBtn.disabled = !ok;
@@ -982,7 +1009,6 @@
     if(ok) setStatus('준비 완료! <b>재생</b>으로 확인하고, <b>녹화</b>로 영상을 뽑아요. 썸네일은 직접 위치·크기 조절할 수 있고, 스티커도 효과를 줄 수 있어요.');
   }
 
-  // ---------- dominant color ----------
   function extractColor(im){
     const c = document.createElement('canvas'); c.width=c.height=40;
     const cx = c.getContext('2d'); cx.drawImage(im,0,0,40,40);
@@ -1018,62 +1044,32 @@
   els.eqRingIntensity.addEventListener('input', e=>{ eqRingIntensity=+e.target.value; if(!running) drawStatic(); });
   els.eqRingSensitivity.addEventListener('input', e=>{ eqRingSensitivity=+e.target.value; if(!running) drawStatic(); });
   els.frequencyPulseChip.addEventListener('click', function(){
-    frequencyPulse=!frequencyPulse;
-    this.classList.toggle('on',frequencyPulse);
+    frequencyPulse=!frequencyPulse; this.classList.toggle('on',frequencyPulse);
     this.textContent=frequencyPulse?'주파수 링 켜기':'주파수 링 끄기';
     if(!running) drawStatic();
   });
   els.frequencyPulseIntensity.addEventListener('input', e=>{ frequencyPulseIntensity=+e.target.value; if(!running) drawStatic(); });
   els.titleInput.addEventListener('compositionstart', ()=>{ titleComposing=true; });
-  els.titleInput.addEventListener('compositionend', e=>{
-    titleComposing=false;
-    title=e.target.value;
-    if(!running) drawStatic();
-  });
-  els.titleInput.addEventListener('input', e=>{
-    if(titleComposing || e.isComposing) return;
-    title=e.target.value;
-    if(!running) drawStatic();
-  });
-  els.titleColorInput.addEventListener('input', e=>{
-    titleColor=e.target.value || '#ffffff';
-    if(!running) drawStatic();
-  });
-  els.titleFontSelect.addEventListener('change', e=>{
-    titleFont = e.target.value || 'default';
-    if(!running) drawStatic();
-  });
-  els.titleSize.addEventListener('input', e=>{
-    titleFontSize = Number(e.target.value) || 56;
-    if(!running) drawStatic();
-  });
-  els.titleSpacing.addEventListener('input', e=>{
-    titleLetterSpacing = Number(e.target.value) || 0;
-    if(!running) drawStatic();
-  });
+  els.titleInput.addEventListener('compositionend', e=>{ titleComposing=false; title=e.target.value; if(!running) drawStatic(); });
+  els.titleInput.addEventListener('input', e=>{ if(titleComposing || e.isComposing) return; title=e.target.value; if(!running) drawStatic(); });
+  els.titleColorInput.addEventListener('input', e=>{ titleColor=e.target.value || '#ffffff'; if(!running) drawStatic(); });
+  els.titleFontSelect.addEventListener('change', e=>{ titleFont = e.target.value || 'default'; if(!running) drawStatic(); });
+  els.titleSize.addEventListener('input', e=>{ titleFontSize = Number(e.target.value) || 56; if(!running) drawStatic(); });
+  els.titleSpacing.addEventListener('input', e=>{ titleLetterSpacing = Number(e.target.value) || 0; if(!running) drawStatic(); });
 
   function canvasPoint(e){
     const rect=canvas.getBoundingClientRect();
-    return {
-      x:(e.clientX-rect.left)*(W/rect.width),
-      y:(e.clientY-rect.top)*(H/rect.height)
-    };
+    return { x:(e.clientX-rect.left)*(W/rect.width), y:(e.clientY-rect.top)*(H/rect.height) };
   }
   function pointInTitle(p){
-    return !!(title && titleBounds &&
-      p.x>=titleBounds.left-18 && p.x<=titleBounds.right+18 &&
-      p.y>=titleBounds.top-14 && p.y<=titleBounds.bottom+14);
+    return !!(title && titleBounds && p.x>=titleBounds.left-18 && p.x<=titleBounds.right+18 && p.y>=titleBounds.top-14 && p.y<=titleBounds.bottom+14);
+  }
+  function pointInSubtitle(p){
+    return !!(subtitlesEnabled && subtitleBounds && p.x>=subtitleBounds.left-20 && p.x<=subtitleBounds.right+20 && p.y>=subtitleBounds.top-16 && p.y<=subtitleBounds.bottom+16);
   }
   function distance(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
-  function worldFromLocal(cx,cy,rotation,lx,ly){
-    const c=Math.cos(rotation), s=Math.sin(rotation);
-    return { x: cx + lx*c - ly*s, y: cy + lx*s + ly*c };
-  }
-  function localFromWorld(cx,cy,rotation,x,y){
-    const dx=x-cx, dy=y-cy;
-    const c=Math.cos(rotation), s=Math.sin(rotation);
-    return { x: dx*c + dy*s, y: -dx*s + dy*c };
-  }
+  function worldFromLocal(cx,cy,rotation,lx,ly){ const c=Math.cos(rotation), s=Math.sin(rotation); return { x: cx + lx*c - ly*s, y: cy + lx*s + ly*c }; }
+  function localFromWorld(cx,cy,rotation,x,y){ const dx=x-cx, dy=y-cy; const c=Math.cos(rotation), s=Math.sin(rotation); return { x: dx*c + dy*s, y: -dx*s + dy*c }; }
   function getOverlayRenderState(item){
     const iw = item?.img?.naturalWidth || item?.img?.width || 1;
     const ih = item?.img?.naturalHeight || item?.img?.height || 1;
@@ -1112,10 +1108,7 @@
     return null;
   }
   function findOverlayHit(p){
-    for(let i=overlays.length-1;i>=0;i--){
-      const hit = hitTestOverlay(p, overlays[i]);
-      if(hit) return hit;
-    }
+    for(let i=overlays.length-1;i>=0;i--){ const hit = hitTestOverlay(p, overlays[i]); if(hit) return hit; }
     return null;
   }
   function hitTestMainImage(p){
@@ -1123,11 +1116,8 @@
     if(!m) return null;
     const resize = {x:m.x+m.w, y:m.y+m.h};
     if(distance(p, resize) <= 16) return {type:'resize'};
-    if(mainImageMode==='disc'){
-      if(Math.hypot(p.x-m.cx,p.y-m.cy) <= m.w/2) return {type:'body'};
-    }else if(p.x>=m.x && p.x<=m.x+m.w && p.y>=m.y && p.y<=m.y+m.h){
-      return {type:'body'};
-    }
+    if(mainImageMode==='disc'){ if(Math.hypot(p.x-m.cx,p.y-m.cy) <= m.w/2) return {type:'body'}; }
+    else if(p.x>=m.x && p.x<=m.x+m.w && p.y>=m.y && p.y<=m.y+m.h){ return {type:'body'}; }
     return null;
   }
 
@@ -1135,66 +1125,39 @@
     const p=canvasPoint(e);
     const overlayHit = findOverlayHit(p);
     if(overlayHit){
-      selectedOverlayId = overlayHit.item.id;
-      mainImageSelected = false;
+      selectedOverlayId = overlayHit.item.id; mainImageSelected = false;
       bringOverlayToFront(selectedOverlayId);
       const current = getOverlayById(selectedOverlayId);
-      if(overlayHit.type==='delete'){
-        removeOverlay(selectedOverlayId);
-        canvas.style.cursor='default';
-        e.preventDefault();
-        return;
-      }
-      if(overlayHit.type==='body'){
-        const m = getOverlayRenderState(current);
-        activeDrag = {type:'overlay-move', id:current.id, offsetX:p.x-m.cx, offsetY:p.y-m.cy};
-        canvas.style.cursor='grabbing';
-      }else if(overlayHit.type==='resize'){
-        activeDrag = {type:'overlay-resize', id:current.id};
-        canvas.style.cursor='nwse-resize';
-      }else if(overlayHit.type==='rotate'){
-        const m = getOverlayRenderState(current);
-        activeDrag = {type:'overlay-rotate', id:current.id, startRotation:current.rotation, startAngle:Math.atan2(p.y-m.cy,p.x-m.cx)};
-        canvas.style.cursor='crosshair';
-      }
-      updateOverlayList();
-      canvas.setPointerCapture?.(e.pointerId);
+      if(overlayHit.type==='delete'){ removeOverlay(selectedOverlayId); canvas.style.cursor='default'; e.preventDefault(); return; }
+      if(overlayHit.type==='body'){ const m = getOverlayRenderState(current); activeDrag = {type:'overlay-move', id:current.id, offsetX:p.x-m.cx, offsetY:p.y-m.cy}; canvas.style.cursor='grabbing'; }
+      else if(overlayHit.type==='resize'){ activeDrag = {type:'overlay-resize', id:current.id}; canvas.style.cursor='nwse-resize'; }
+      else if(overlayHit.type==='rotate'){ const m = getOverlayRenderState(current); activeDrag = {type:'overlay-rotate', id:current.id, startRotation:current.rotation, startAngle:Math.atan2(p.y-m.cy,p.x-m.cx)}; canvas.style.cursor='crosshair'; }
+      updateOverlayList(); canvas.setPointerCapture?.(e.pointerId);
       if(!running) drawStatic();
-      e.preventDefault();
-      return;
+      e.preventDefault(); return;
     }
     const mainHit = hitTestMainImage(p);
     if(mainHit){
-      selectedOverlayId = null;
-      mainImageSelected = true;
-      updateOverlayList();
-      if(mainHit.type==='body'){
-        activeDrag = {type:'main-move', offsetX:p.x-mainImageX*W, offsetY:p.y-mainImageY*H};
-        canvas.style.cursor='grabbing';
-      }else{
-        activeDrag = {type:'main-resize'};
-        canvas.style.cursor='nwse-resize';
-      }
+      selectedOverlayId = null; mainImageSelected = true; updateOverlayList();
+      if(mainHit.type==='body'){ activeDrag = {type:'main-move', offsetX:p.x-mainImageX*W, offsetY:p.y-mainImageY*H}; canvas.style.cursor='grabbing'; }
+      else{ activeDrag = {type:'main-resize'}; canvas.style.cursor='nwse-resize'; }
       canvas.setPointerCapture?.(e.pointerId);
       if(!running) drawStatic();
-      e.preventDefault();
-      return;
+      e.preventDefault(); return;
     }
     if(pointInTitle(p)){
-      titleDragging=true;
-      titleDragOffset.x=p.x-titleX*W;
-      titleDragOffset.y=p.y-titleY*H;
-      mainImageSelected = false;
-      selectedOverlayId = null;
-      updateOverlayList();
-      canvas.setPointerCapture?.(e.pointerId);
-      canvas.style.cursor='grabbing';
-      e.preventDefault();
-      return;
+      titleDragging=true; titleDragOffset.x=p.x-titleX*W; titleDragOffset.y=p.y-titleY*H;
+      mainImageSelected = false; selectedOverlayId = null; updateOverlayList();
+      canvas.setPointerCapture?.(e.pointerId); canvas.style.cursor='grabbing';
+      e.preventDefault(); return;
     }
-    mainImageSelected = false;
-    selectedOverlayId = null;
-    updateOverlayList();
+    if(pointInSubtitle(p)){
+      subtitleDragging=true; subtitleDragOffset.x=p.x-subtitleX*W; subtitleDragOffset.y=p.y-subtitleYRatio*H;
+      mainImageSelected = false; selectedOverlayId = null; updateOverlayList();
+      canvas.setPointerCapture?.(e.pointerId); canvas.style.cursor='grabbing';
+      e.preventDefault(); return;
+    }
+    mainImageSelected = false; selectedOverlayId = null; updateOverlayList();
     if(!running) drawStatic();
   });
   canvas.addEventListener('pointermove', e=>{
@@ -1202,46 +1165,32 @@
     if(activeDrag){
       if(activeDrag.type==='main-move'){
         const m = getMainImageMetrics();
-        if(m){
-          const nx = Math.max(m.w/2, Math.min(W-m.w/2, p.x-activeDrag.offsetX));
-          const ny = Math.max(m.h/2, Math.min(H-m.h/2, p.y-activeDrag.offsetY));
-          mainImageX = nx / W;
-          mainImageY = ny / H;
-        }
+        if(m){ const nx = Math.max(m.w/2, Math.min(W-m.w/2, p.x-activeDrag.offsetX)); const ny = Math.max(m.h/2, Math.min(H-m.h/2, p.y-activeDrag.offsetY)); mainImageX = nx / W; mainImageY = ny / H; }
         canvas.style.cursor='grabbing';
       }else if(activeDrag.type==='main-resize'){
         const m = getMainImageMetrics();
-        if(m){
-          const halfW = Math.max(40, Math.abs(p.x-m.cx));
-          mainImageWidthRatio = Math.max(0.08, Math.min(0.9, (halfW*2)/W));
-        }
+        if(m){ const halfW = Math.max(40, Math.abs(p.x-m.cx)); mainImageWidthRatio = Math.max(0.08, Math.min(0.9, (halfW*2)/W)); }
         canvas.style.cursor='nwse-resize';
       }else {
         const item = getOverlayById(activeDrag.id);
         if(!item) return;
         if(activeDrag.type==='overlay-move'){
           const m = getOverlayRenderState(item);
-          const nx = Math.max(m.w/2, Math.min(W-m.w/2, p.x-activeDrag.offsetX));
-          const ny = Math.max(m.h/2, Math.min(H-m.h/2, p.y-activeDrag.offsetY));
-          item.x = nx / W;
-          item.y = ny / H;
-          canvas.style.cursor='grabbing';
+          const nx = Math.max(m.w/2, Math.min(W-m.w/2, p.x-activeDrag.offsetX)); const ny = Math.max(m.h/2, Math.min(H-m.h/2, p.y-activeDrag.offsetY));
+          item.x = nx / W; item.y = ny / H; canvas.style.cursor='grabbing';
         }else if(activeDrag.type==='overlay-resize'){
           const m = getOverlayRenderState(item);
           const lp = localFromWorld(m.cx,m.cy,m.rotation,p.x,p.y);
           const wantedW = Math.max(Math.abs(lp.x)*2, Math.abs(lp.y)*2*m.ratio, 28);
-          item.widthRatio = Math.max(0.03, Math.min(0.9, wantedW / W));
-          canvas.style.cursor='nwse-resize';
+          item.widthRatio = Math.max(0.03, Math.min(0.9, wantedW / W)); canvas.style.cursor='nwse-resize';
         }else if(activeDrag.type==='overlay-rotate'){
           const m = getOverlayRenderState(item);
           const angle = Math.atan2(p.y-m.cy,p.x-m.cx);
-          item.rotation = activeDrag.startRotation + (angle - activeDrag.startAngle);
-          canvas.style.cursor='crosshair';
+          item.rotation = activeDrag.startRotation + (angle - activeDrag.startAngle); canvas.style.cursor='crosshair';
         }
       }
       if(!running) drawStatic();
-      e.preventDefault();
-      return;
+      e.preventDefault(); return;
     }
     if(titleDragging){
       const halfW=titleBounds ? titleBounds.width/2 : 0;
@@ -1249,127 +1198,61 @@
       let nx=Math.max(halfW+12,Math.min(W-halfW-12,p.x-titleDragOffset.x));
       let ny=Math.max(halfH+12,Math.min(H-halfH-12,p.y-titleDragOffset.y));
       if(Math.abs(nx - W/2) < 24) nx = W/2;
-      titleX=nx/W;
-      titleY=ny/H;
+      titleX=nx/W; titleY=ny/H; canvas.style.cursor='grabbing';
+      if(!running) drawStatic();
+      e.preventDefault(); return;
+    }
+    if(subtitleDragging){
+      let nx = p.x - subtitleDragOffset.x;
+      let ny = p.y - subtitleDragOffset.y;
+      nx = Math.max(W*0.05, Math.min(W*0.95, nx));
+      ny = Math.max(H*0.30, Math.min(H*0.97, ny));
+      if(Math.abs(nx - W/2) < 24) nx = W/2;
+      subtitleX = nx/W; subtitleYRatio = ny/H;
+      if(els.subtitleY) els.subtitleY.value = String(Math.round(Math.max(45, Math.min(92, subtitleYRatio*100))));
       canvas.style.cursor='grabbing';
       if(!running) drawStatic();
-      e.preventDefault();
-      return;
+      e.preventDefault(); return;
     }
     const overlayHover = findOverlayHit(p);
-    if(overlayHover){
-      canvas.style.cursor = overlayHover.type==='body' ? 'grab' : (overlayHover.type==='rotate' ? 'crosshair' : 'pointer');
-      return;
-    }
+    if(overlayHover){ canvas.style.cursor = overlayHover.type==='body' ? 'grab' : (overlayHover.type==='rotate' ? 'crosshair' : 'pointer'); return; }
     const mainHover = hitTestMainImage(p);
-    if(mainHover){
-      canvas.style.cursor = mainHover.type==='body' ? 'grab' : 'nwse-resize';
-      return;
-    }
-    canvas.style.cursor=pointInTitle(p)?'grab':'default';
+    if(mainHover){ canvas.style.cursor = mainHover.type==='body' ? 'grab' : 'nwse-resize'; return; }
+    canvas.style.cursor=(pointInTitle(p)||pointInSubtitle(p))?'grab':'default';
   });
   function endPointerInteraction(e){
-    if(activeDrag){
-      activeDrag = null;
-      canvas.releasePointerCapture?.(e.pointerId);
-      canvas.style.cursor='default';
-      return;
-    }
+    if(activeDrag){ activeDrag = null; canvas.releasePointerCapture?.(e.pointerId); canvas.style.cursor='default'; return; }
+    if(subtitleDragging){ subtitleDragging=false; canvas.releasePointerCapture?.(e.pointerId); canvas.style.cursor='default'; return; }
     if(!titleDragging) return;
-    titleDragging=false;
-    canvas.releasePointerCapture?.(e.pointerId);
-    canvas.style.cursor='default';
+    titleDragging=false; canvas.releasePointerCapture?.(e.pointerId); canvas.style.cursor='default';
   }
   canvas.addEventListener('pointerup', endPointerInteraction);
   canvas.addEventListener('pointercancel', endPointerInteraction);
-  canvas.addEventListener('pointerleave', ()=>{ if(!titleDragging && !activeDrag) canvas.style.cursor='default'; });
-  els.titleShadowChip.addEventListener('click', function(){
-    titleShadow = !titleShadow;
-    this.classList.toggle('on', titleShadow);
-    this.textContent = titleShadow ? '그림자 사용' : '그림자 없음';
-    if(!running) drawStatic();
-  });
-  els.titleGuideChip.addEventListener('click', function(){
-    showTitleGuide = !showTitleGuide;
-    this.classList.toggle('on', showTitleGuide);
-    if(!running) drawStatic();
-  });
-  els.titleCenterBtn.addEventListener('click', ()=>{
-    titleX = 0.5;
-    if(!running) drawStatic();
-  });
-  els.imgModeOriginalChip.addEventListener('click', ()=>{
-    mainImageMode = 'original';
-    els.imgModeOriginalChip.classList.add('on');
-    els.imgModeDiscChip.classList.remove('on');
-    if(!running) drawStatic();
-  });
-  els.imgModeDiscChip.addEventListener('click', ()=>{
-    mainImageMode = 'disc';
-    els.imgModeDiscChip.classList.add('on');
-    els.imgModeOriginalChip.classList.remove('on');
-    if(!running) drawStatic();
-  });
-  els.mainImageCenterBtn.addEventListener('click', ()=>{
-    mainImageX = 0.5; mainImageY = 0.43;
-    mainImageSelected = true;
-    selectedOverlayId = null;
-    updateOverlayList();
-    if(!running) drawStatic();
-  });
-  els.mainImageZoom.addEventListener('input', e=>{
-    mainImageZoom = Math.max(1, Number(e.target.value || 100)/100);
-    if(!running) drawStatic();
-  });
-  els.mainImageCropX.addEventListener('input', e=>{
-    mainImageCropX = Math.max(-1, Math.min(1, Number(e.target.value || 0)/100));
-    if(!running) drawStatic();
-  });
-  els.mainImageCropY.addEventListener('input', e=>{
-    mainImageCropY = Math.max(-1, Math.min(1, Number(e.target.value || 0)/100));
-    if(!running) drawStatic();
-  });
-  els.imgSpinChip.addEventListener('click', function(){
-    mainImageSpin = !mainImageSpin;
-    this.classList.toggle('on', mainImageSpin);
-    if(!running) drawStatic();
-  });
-  els.imgSpinSpeed.addEventListener('input', e=>{
-    mainImageSpinSpeed = Number(e.target.value) || 0;
-    if(!running) drawStatic();
-  });
-  els.overlayAnimSelect.addEventListener('change', e=>{
-    const item = getOverlayById(selectedOverlayId);
-    if(!item) return;
-    item.anim = e.target.value || 'none';
-    if(!running) drawStatic();
-  });
-  els.overlayAnimSpeed.addEventListener('input', e=>{
-    const item = getOverlayById(selectedOverlayId);
-    if(!item) return;
-    item.animSpeed = Number(e.target.value) || 0;
-    if(!running) drawStatic();
-  });
+  canvas.addEventListener('pointerleave', ()=>{ if(!titleDragging && !activeDrag && !subtitleDragging) canvas.style.cursor='default'; });
+
+  els.titleShadowChip.addEventListener('click', function(){ titleShadow = !titleShadow; this.classList.toggle('on', titleShadow); this.textContent = titleShadow ? '그림자 사용' : '그림자 없음'; if(!running) drawStatic(); });
+  els.titleGuideChip.addEventListener('click', function(){ showTitleGuide = !showTitleGuide; this.classList.toggle('on', showTitleGuide); if(!running) drawStatic(); });
+  els.titleCenterBtn.addEventListener('click', ()=>{ titleX = 0.5; if(!running) drawStatic(); });
+  els.imgModeOriginalChip.addEventListener('click', ()=>{ mainImageMode = 'original'; els.imgModeOriginalChip.classList.add('on'); els.imgModeDiscChip.classList.remove('on'); if(!running) drawStatic(); });
+  els.imgModeDiscChip.addEventListener('click', ()=>{ mainImageMode = 'disc'; els.imgModeDiscChip.classList.add('on'); els.imgModeOriginalChip.classList.remove('on'); if(!running) drawStatic(); });
+  els.mainImageCenterBtn.addEventListener('click', ()=>{ mainImageX = 0.5; mainImageY = 0.43; mainImageSelected = true; selectedOverlayId = null; updateOverlayList(); if(!running) drawStatic(); });
+  els.mainImageZoom.addEventListener('input', e=>{ mainImageZoom = Math.max(1, Number(e.target.value || 100)/100); if(!running) drawStatic(); });
+  els.mainImageCropX.addEventListener('input', e=>{ mainImageCropX = Math.max(-1, Math.min(1, Number(e.target.value || 0)/100)); if(!running) drawStatic(); });
+  els.mainImageCropY.addEventListener('input', e=>{ mainImageCropY = Math.max(-1, Math.min(1, Number(e.target.value || 0)/100)); if(!running) drawStatic(); });
+  els.imgSpinChip.addEventListener('click', function(){ mainImageSpin = !mainImageSpin; this.classList.toggle('on', mainImageSpin); if(!running) drawStatic(); });
+  els.imgSpinSpeed.addEventListener('input', e=>{ mainImageSpinSpeed = Number(e.target.value) || 0; if(!running) drawStatic(); });
+  els.overlayAnimSelect.addEventListener('change', e=>{ const item = getOverlayById(selectedOverlayId); if(!item) return; item.anim = e.target.value || 'none'; if(!running) drawStatic(); });
+  els.overlayAnimSpeed.addEventListener('input', e=>{ const item = getOverlayById(selectedOverlayId); if(!item) return; item.animSpeed = Number(e.target.value) || 0; if(!running) drawStatic(); });
   els.twinkle.addEventListener('input', ()=>{ if(!running) drawStatic(); });
   els.starCount.addEventListener('input', ()=>{ if(!running) drawStatic(); });
   els.backGlow.addEventListener('input', ()=>{ if(!running) drawStatic(); });
 
-  // background controls
   const bgSolidPanel = document.getElementById('bgSolidPanel');
   const bgGradientPanel = document.getElementById('bgGradientPanel');
   const bgImagePanel = document.getElementById('bgImagePanel');
-  function refreshBgUI(){
-    bgSolidPanel.hidden = bgType!=='solid';
-    bgGradientPanel.hidden = bgType!=='gradient';
-    bgImagePanel.hidden = bgType!=='image';
-  }
+  function refreshBgUI(){ bgSolidPanel.hidden = bgType!=='solid'; bgGradientPanel.hidden = bgType!=='gradient'; bgImagePanel.hidden = bgType!=='image'; }
   document.querySelectorAll('[data-bg]').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      bgType = chip.dataset.bg;
-      document.querySelectorAll('[data-bg]').forEach(c=>c.classList.toggle('on', c===chip));
-      refreshBgUI();
-      if(!running) drawStatic();
-    });
+    chip.addEventListener('click', ()=>{ bgType = chip.dataset.bg; document.querySelectorAll('[data-bg]').forEach(c=>c.classList.toggle('on', c===chip)); refreshBgUI(); if(!running) drawStatic(); });
   });
   document.getElementById('bgColorInput').addEventListener('input', e=>{ bgSolidColor=e.target.value; if(!running) drawStatic(); });
   document.getElementById('bgGradientColor1Input').addEventListener('input', e=>{ bgGradientColor1=e.target.value; if(!running) drawStatic(); });
@@ -1379,19 +1262,13 @@
 
   const bgImgInput = document.getElementById('bgImgInput');
   const bgImgDrop = document.getElementById('bgImgDrop');
-  function loadBgImage(file){
-    document.getElementById('bgImgName').textContent = file.name;
-    const im = new Image();
-    im.onload = ()=>{ bgImage = im; if(!running) drawStatic(); };
-    im.src = URL.createObjectURL(file);
-  }
+  function loadBgImage(file){ document.getElementById('bgImgName').textContent = file.name; const im = new Image(); im.onload = ()=>{ bgImage = im; if(!running) drawStatic(); }; im.src = URL.createObjectURL(file); }
   bgImgDrop.addEventListener('click', ()=>bgImgInput.click());
   bgImgInput.addEventListener('change', e=>{ if(e.target.files[0]) loadBgImage(e.target.files[0]); });
   ['dragover','dragenter'].forEach(ev=>bgImgDrop.addEventListener(ev,e=>{e.preventDefault();bgImgDrop.classList.add('drag');}));
   ['dragleave','drop'].forEach(ev=>bgImgDrop.addEventListener(ev,e=>{e.preventDefault();bgImgDrop.classList.remove('drag');}));
   bgImgDrop.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) loadBgImage(e.dataTransfer.files[0]); });
 
-  // ---------- audio graph ----------
   function initAudio(){
     if(audioCtx) return;
     audioCtx = new (window.AudioContext||window.webkitAudioContext)();
@@ -1409,37 +1286,22 @@
 
   // ---------- helpers ----------
   function drawImageCover(im, x, y, w, h, radius){
-    ctx.save();
-    roundRectPath(x,y,w,h,radius);
-    ctx.clip();
+    ctx.save(); roundRectPath(x,y,w,h,radius); ctx.clip();
     const ir = im.width/im.height, br = w/h;
     let dw,dh,dx,dy;
-    if(ir>br){ dh=h; dw=h*ir; dx=x-(dw-w)/2; dy=y; }
-    else { dw=w; dh=w/ir; dx=x; dy=y-(dh-h)/2; }
-    ctx.drawImage(im,dx,dy,dw,dh);
-    ctx.restore();
+    if(ir>br){ dh=h; dw=h*ir; dx=x-(dw-w)/2; dy=y; } else { dw=w; dh=w/ir; dx=x; dy=y-(dh-h)/2; }
+    ctx.drawImage(im,dx,dy,dw,dh); ctx.restore();
   }
-  function drawImageContain(im, x, y, w, h, radius){
-    ctx.save();
-    roundRectPath(x,y,w,h,radius);
-    ctx.clip();
-    ctx.drawImage(im,x,y,w,h);
-    ctx.restore();
-  }
+  function drawImageContain(im, x, y, w, h, radius){ ctx.save(); roundRectPath(x,y,w,h,radius); ctx.clip(); ctx.drawImage(im,x,y,w,h); ctx.restore(); }
   function drawImageCoverPan(im, x, y, w, h, radius, zoom=1, panX=0, panY=0){
     ctx.save();
-    if(radius>0){ roundRectPath(x,y,w,h,radius); ctx.clip(); }
-    else { ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); }
+    if(radius>0){ roundRectPath(x,y,w,h,radius); ctx.clip(); } else { ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); }
     const ir = im.width/im.height, br = w/h;
     let dw,dh;
-    if(ir>br){ dh=h*zoom; dw=dh*ir; }
-    else { dw=w*zoom; dh=dw/ir; }
-    const extraX = Math.max(0, dw-w)/2;
-    const extraY = Math.max(0, dh-h)/2;
-    const dx = x + (w-dw)/2 + extraX*panX;
-    const dy = y + (h-dh)/2 + extraY*panY;
-    ctx.drawImage(im,dx,dy,dw,dh);
-    ctx.restore();
+    if(ir>br){ dh=h*zoom; dw=dh*ir; } else { dw=w*zoom; dh=dw/ir; }
+    const extraX = Math.max(0, dw-w)/2, extraY = Math.max(0, dh-h)/2;
+    const dx = x + (w-dw)/2 + extraX*panX, dy = y + (h-dh)/2 + extraY*panY;
+    ctx.drawImage(im,dx,dy,dw,dh); ctx.restore();
   }
   function getRenderTime(){ return running ? audio.currentTime : 0; }
   function getMainImageMetrics(){
@@ -1448,76 +1310,38 @@
     let w = Math.max(72, Math.min(W*0.88, mainImageWidthRatio * W));
     let h;
     if(mainImageMode==='disc') h = w;
-    else {
-      h = w / (ir || 1);
-      const maxH = H * 0.74;
-      if(h > maxH){ h = maxH; w = h * (ir || 1); }
-    }
-    const cx = mainImageX * W;
-    const cy = mainImageY * H;
+    else { h = w / (ir || 1); const maxH = H * 0.74; if(h > maxH){ h = maxH; w = h * (ir || 1); } }
+    const cx = mainImageX * W, cy = mainImageY * H;
     const rotation = (mainImageMode==='disc' && mainImageSpin) ? getRenderTime() * (0.35 + (mainImageSpinSpeed/100)*3.4) : 0;
     return { cx, cy, w, h, rotation, x:cx-w/2, y:cy-h/2, radius: rounded ? Math.min(w,h)*0.05 : 0 };
   }
   function getDiscHoleRadius(m){ return Math.max(12, m.w*0.065); }
-  function makeDonutPath(cx,cy,outerR,innerR){
-    const path = new Path2D();
-    path.arc(cx,cy,outerR,0,Math.PI*2,false);
-    path.arc(cx,cy,innerR,0,Math.PI*2,true);
-    return path;
-  }
+  function makeDonutPath(cx,cy,outerR,innerR){ const path = new Path2D(); path.arc(cx,cy,outerR,0,Math.PI*2,false); path.arc(cx,cy,innerR,0,Math.PI*2,true); return path; }
   function drawMainImage(im, m){
     if(!im || !m) return;
     if(mainImageMode==='disc'){
       const holeR = getDiscHoleRadius(m);
-      ctx.save();
-      ctx.translate(m.cx,m.cy);
-      ctx.rotate(m.rotation);
-      const discPath = makeDonutPath(0,0,m.w/2,holeR);
-      ctx.clip(discPath,'evenodd');
+      ctx.save(); ctx.translate(m.cx,m.cy); ctx.rotate(m.rotation);
+      const discPath = makeDonutPath(0,0,m.w/2,holeR); ctx.clip(discPath,'evenodd');
       drawImageCoverPan(im, -m.w/2, -m.h/2, m.w, m.h, 0, mainImageZoom, mainImageCropX, mainImageCropY);
       ctx.restore();
-      ctx.save();
-      ctx.translate(m.cx,m.cy);
-      ctx.strokeStyle='rgba(255,255,255,0.22)';
-      ctx.lineWidth=Math.max(2,m.w*0.01);
-      ctx.beginPath(); ctx.arc(0,0,m.w*0.47,0,Math.PI*2); ctx.stroke();
-      ctx.strokeStyle='rgba(255,255,255,0.52)';
-      ctx.lineWidth=Math.max(1.5,m.w*0.006);
-      ctx.beginPath(); ctx.arc(0,0,holeR,0,Math.PI*2); ctx.stroke();
+      ctx.save(); ctx.translate(m.cx,m.cy);
+      ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=Math.max(2,m.w*0.01); ctx.beginPath(); ctx.arc(0,0,m.w*0.47,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,0.52)'; ctx.lineWidth=Math.max(1.5,m.w*0.006); ctx.beginPath(); ctx.arc(0,0,holeR,0,Math.PI*2); ctx.stroke();
       ctx.restore();
-    }else{
-      drawImageContain(im, m.x, m.y, m.w, m.h, m.radius);
-    }
+    }else{ drawImageContain(im, m.x, m.y, m.w, m.h, m.radius); }
   }
   function drawMainImageSelection(m){
     if(!m || !mainImageSelected || isRecording) return;
-    ctx.save();
-    ctx.strokeStyle='rgba(255,255,255,0.96)';
-    ctx.lineWidth=2;
-    ctx.setLineDash([10,6]);
-    if(mainImageMode==='disc'){
-      ctx.beginPath(); ctx.arc(m.cx,m.cy,m.w/2+2,0,Math.PI*2); ctx.stroke();
-    }else{
-      ctx.strokeRect(m.x,m.y,m.w,m.h);
-    }
-    ctx.setLineDash([]);
-    ctx.fillStyle='#8a52ff';
-    ctx.beginPath(); ctx.arc(m.x+m.w,m.y+m.h,11,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#111';
-    ctx.font=`700 ${Math.max(11,12*(H/1080))}px "Pretendard",sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('↘', m.x+m.w, m.y+m.h+0.5);
-    ctx.restore();
+    ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.96)'; ctx.lineWidth=2; ctx.setLineDash([10,6]);
+    if(mainImageMode==='disc'){ ctx.beginPath(); ctx.arc(m.cx,m.cy,m.w/2+2,0,Math.PI*2); ctx.stroke(); } else { ctx.strokeRect(m.x,m.y,m.w,m.h); }
+    ctx.setLineDash([]); ctx.fillStyle='#8a52ff'; ctx.beginPath(); ctx.arc(m.x+m.w,m.y+m.h,11,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#111'; ctx.font=`700 ${Math.max(11,12*(H/1080))}px "Pretendard",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('↘', m.x+m.w, m.y+m.h+0.5); ctx.restore();
   }
   function roundRectPath(x,y,w,h,r){
-    r=Math.min(r,w/2,h/2);
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
+    r=Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
   }
   const acc = (a)=>`rgba(${accent.r},${accent.g},${accent.b},${a})`;
 
@@ -1529,188 +1353,92 @@
       default: return '"Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif';
     }
   }
-
   function measureSpacedText(text, spacing){
-    const chars=Array.from(text);
-    let width=0;
+    const chars=Array.from(text); let width=0;
     for(let i=0;i<chars.length;i++) width+=ctx.measureText(chars[i]).width;
     if(chars.length>1) width+=spacing*(chars.length-1);
     return width;
   }
-
   function fillSpacedText(text, centerX, y, spacing){
     const chars=Array.from(text);
     const widths=chars.map(ch=>ctx.measureText(ch).width);
     const total=widths.reduce((sum,v)=>sum+v,0)+Math.max(0,chars.length-1)*spacing;
-    let x=centerX-total/2;
-    ctx.textAlign='left';
-    for(let i=0;i<chars.length;i++){
-      ctx.fillText(chars[i],x,y);
-      x+=widths[i]+spacing;
-    }
+    let x=centerX-total/2; ctx.textAlign='left';
+    for(let i=0;i<chars.length;i++){ ctx.fillText(chars[i],x,y); x+=widths[i]+spacing; }
     return total;
   }
   function drawTitleGuide(){
-    ctx.save();
-    ctx.strokeStyle='rgba(255,255,255,0.22)';
-    ctx.lineWidth=1;
-    ctx.setLineDash([10,10]);
-    ctx.beginPath();
-    ctx.moveTo(W/2,0);
-    ctx.lineTo(W/2,H);
-    ctx.stroke();
-    ctx.restore();
+    ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1; ctx.setLineDash([10,10]);
+    ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke(); ctx.restore();
   }
   function drawOverlayItem(item, editingDecorations){
     if(!item?.img) return;
     const m = getOverlayRenderState(item);
-    ctx.save();
-    ctx.translate(m.cx,m.cy);
-    ctx.rotate(m.rotation);
+    ctx.save(); ctx.translate(m.cx,m.cy); ctx.rotate(m.rotation);
     ctx.drawImage(item.img,-m.w/2,-m.h/2,m.w,m.h);
     if(editingDecorations && selectedOverlayId===item.id){
-      ctx.strokeStyle='rgba(255,255,255,0.95)';
-      ctx.lineWidth=2;
-      ctx.setLineDash([10,6]);
-      ctx.strokeRect(-m.w/2,-m.h/2,m.w,m.h);
-      ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(255,255,255,0.95)'; ctx.lineWidth=2; ctx.setLineDash([10,6]); ctx.strokeRect(-m.w/2,-m.h/2,m.w,m.h); ctx.setLineDash([]);
       const handleRadius = 10;
-      const localHandles = {
-        rotate:{x:0,y:-m.h/2-30},
-        resize:{x:m.w/2,y:m.h/2},
-        delete:{x:m.w/2+20,y:-m.h/2-20}
-      };
-      ctx.strokeStyle='rgba(255,255,255,0.7)';
-      ctx.beginPath();
-      ctx.moveTo(0,-m.h/2); ctx.lineTo(localHandles.rotate.x,localHandles.rotate.y);
-      ctx.stroke();
-      ctx.fillStyle='#ffffff';
-      ctx.beginPath(); ctx.arc(localHandles.rotate.x,localHandles.rotate.y,handleRadius,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#8a52ff';
-      ctx.beginPath(); ctx.arc(localHandles.resize.x,localHandles.resize.y,handleRadius,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#ff3b60';
-      ctx.beginPath(); ctx.arc(localHandles.delete.x,localHandles.delete.y,handleRadius+1,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111';
-      ctx.font=`700 ${Math.max(11, 12*(H/1080))}px "Pretendard",sans-serif`;
-      ctx.textAlign='center';
-      ctx.textBaseline='middle';
+      const localHandles = { rotate:{x:0,y:-m.h/2-30}, resize:{x:m.w/2,y:m.h/2}, delete:{x:m.w/2+20,y:-m.h/2-20} };
+      ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(0,-m.h/2); ctx.lineTo(localHandles.rotate.x,localHandles.rotate.y); ctx.stroke();
+      ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(localHandles.rotate.x,localHandles.rotate.y,handleRadius,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#8a52ff'; ctx.beginPath(); ctx.arc(localHandles.resize.x,localHandles.resize.y,handleRadius,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ff3b60'; ctx.beginPath(); ctx.arc(localHandles.delete.x,localHandles.delete.y,handleRadius+1,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#111'; ctx.font=`700 ${Math.max(11, 12*(H/1080))}px "Pretendard",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('↻', localHandles.rotate.x, localHandles.rotate.y+0.5);
       ctx.fillText('X', localHandles.delete.x, localHandles.delete.y+0.5);
       ctx.fillText('↘', localHandles.resize.x, localHandles.resize.y+0.5);
     }
     ctx.restore();
   }
-
-  function freqToBin(freq){
-    if(!audioCtx || !analyser || !freqData) return 0;
-    const hzPerBin = audioCtx.sampleRate / analyser.fftSize;
-    return Math.max(0, Math.min(freqData.length-1, Math.round(freq/hzPerBin)));
-  }
-
-  function averageFrequency(minHz,maxHz){
-    if(!freqData || !audioCtx || !analyser) return 0;
-    const a=freqToBin(minHz), b=Math.max(a,freqToBin(maxHz));
-    let sum=0;
-    for(let i=a;i<=b;i++) sum+=freqData[i];
-    return sum/Math.max(1,b-a+1)/255;
-  }
-
-  function logBandValue(index,count,minHz=45,maxHz=16000){
-    if(!freqData || !audioCtx || !analyser) return 0;
-    const ratio=maxHz/minHz;
-    const f0=minHz*Math.pow(ratio,index/count);
-    const f1=minHz*Math.pow(ratio,(index+1)/count);
-    const a=freqToBin(f0), b=Math.max(a,freqToBin(f1));
-    let sum=0;
-    for(let i=a;i<=b;i++) sum+=freqData[i];
-    return sum/Math.max(1,b-a+1)/255;
-  }
+  function freqToBin(freq){ if(!audioCtx || !analyser || !freqData) return 0; const hzPerBin = audioCtx.sampleRate / analyser.fftSize; return Math.max(0, Math.min(freqData.length-1, Math.round(freq/hzPerBin))); }
+  function averageFrequency(minHz,maxHz){ if(!freqData || !audioCtx || !analyser) return 0; const a=freqToBin(minHz), b=Math.max(a,freqToBin(maxHz)); let sum=0; for(let i=a;i<=b;i++) sum+=freqData[i]; return sum/Math.max(1,b-a+1)/255; }
+  function logBandValue(index,count,minHz=45,maxHz=16000){ if(!freqData || !audioCtx || !analyser) return 0; const ratio=maxHz/minHz; const f0=minHz*Math.pow(ratio,index/count); const f1=minHz*Math.pow(ratio,(index+1)/count); const a=freqToBin(f0), b=Math.max(a,freqToBin(f1)); let sum=0; for(let i=a;i<=b;i++) sum+=freqData[i]; return sum/Math.max(1,b-a+1)/255; }
 
   function drawSparkleShape(x,y,size,spin=0,alpha=1){
     const inner = size*0.28;
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.rotate(spin);
-    ctx.shadowColor = acc(0.55*alpha);
-    ctx.shadowBlur = size*1.4;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(spin);
+    ctx.shadowColor = acc(0.55*alpha); ctx.shadowBlur = size*1.4;
     const grad = ctx.createRadialGradient(0,0,0,0,0,size);
     grad.addColorStop(0,'rgba(255,255,255,' + (0.98*alpha) + ')');
-    grad.addColorStop(0.22, acc(0.95*alpha));
-    grad.addColorStop(0.7, acc(0.36*alpha));
-    grad.addColorStop(1, acc(0));
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(0,-size);
-    ctx.lineTo(inner,-inner);
-    ctx.lineTo(size,0);
-    ctx.lineTo(inner,inner);
-    ctx.lineTo(0,size);
-    ctx.lineTo(-inner,inner);
-    ctx.lineTo(-size,0);
-    ctx.lineTo(-inner,-inner);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+    grad.addColorStop(0.22, acc(0.95*alpha)); grad.addColorStop(0.7, acc(0.36*alpha)); grad.addColorStop(1, acc(0));
+    ctx.fillStyle = grad; ctx.beginPath();
+    ctx.moveTo(0,-size); ctx.lineTo(inner,-inner); ctx.lineTo(size,0); ctx.lineTo(inner,inner);
+    ctx.lineTo(0,size); ctx.lineTo(-inner,inner); ctx.lineTo(-size,0); ctx.lineTo(-inner,-inner);
+    ctx.closePath(); ctx.fill(); ctx.restore();
   }
-
   function getOrbitPoint(t,x,y,w,h,pad){
     const left=x-pad, top=y-pad, right=x+w+pad, bottom=y+h+pad;
-    const per=2*((right-left)+(bottom-top));
-    let d=((t%1)+1)%1 * per;
-    if(d < (right-left)) return {x:left+d, y:top};
-    d -= (right-left);
-    if(d < (bottom-top)) return {x:right, y:top+d};
-    d -= (bottom-top);
-    if(d < (right-left)) return {x:right-d, y:bottom};
-    d -= (right-left);
+    const per=2*((right-left)+(bottom-top)); let d=((t%1)+1)%1 * per;
+    if(d < (right-left)) return {x:left+d, y:top}; d -= (right-left);
+    if(d < (bottom-top)) return {x:right, y:top+d}; d -= (bottom-top);
+    if(d < (right-left)) return {x:right-d, y:bottom}; d -= (right-left);
     return {x:left, y:bottom-d};
   }
-  function getDiscOrbitPoint(t,cx,cy,r){
-    const a = -Math.PI/2 + (((t%1)+1)%1) * Math.PI * 2;
-    return { x: cx + Math.cos(a)*r, y: cy + Math.sin(a)*r };
-  }
+  function getDiscOrbitPoint(t,cx,cy,r){ const a = -Math.PI/2 + (((t%1)+1)%1) * Math.PI * 2; return { x: cx + Math.cos(a)*r, y: cy + Math.sin(a)*r }; }
 
-  // ---------- 이퀄라이저 링 (썸네일 주변에서 파장이 커졌다 작아졌다) ----------
   function drawEqRing(cx, cy, cardW, cardH, isStatic){
     if(!eqRing) return;
     const intensity = Math.max(0, Math.min(1, eqRingIntensity/100));
     if(intensity<=0) return;
     const disc = mainImageMode==='disc' && Math.abs(cardW-cardH) < 1;
     const baseR = (disc ? cardW/2 : Math.hypot(cardW,cardH)/2) + 12;
-    // 전체가 커졌다 작아지는 호흡 (킥/음량에 반응)
     const breathe = 1 + (isStatic ? 0 : (smBass*0.10 + glowEnvelope*0.16)) * (0.5 + intensity);
     const r0 = baseR * breathe;
-
-    // 확장하는 파장(리플) — 비트마다 링이 커지며 퍼져 사라짐
     if(!isStatic){
       const now = audio ? audio.currentTime : 0;
       const rising = glowEnvelope - prevGlowEnv;
-      if(rising > 0.12 && glowEnvelope > 0.42 && (now - lastRippleT) > 0.16){
-        lastRippleT = now;
-        ripples.push({ r:r0, life:1, w:2.6 + intensity*3 });
-        if(ripples.length>8) ripples.splice(0, ripples.length-8);
-      }
+      if(rising > 0.12 && glowEnvelope > 0.42 && (now - lastRippleT) > 0.16){ lastRippleT = now; ripples.push({ r:r0, life:1, w:2.6 + intensity*3 }); if(ripples.length>8) ripples.splice(0, ripples.length-8); }
       prevGlowEnv = glowEnvelope;
     }
     ripples.forEach(rp=>{
-      rp.r += 5 + intensity*11;
-      rp.life -= 0.02;
+      rp.r += 5 + intensity*11; rp.life -= 0.02;
       const a = Math.max(0, rp.life) * 0.4 * (0.5+intensity);
-      if(a>0.01){
-        ctx.save();
-        ctx.strokeStyle = acc(a);
-        ctx.lineWidth = rp.w * (0.4 + rp.life*0.8);
-        ctx.beginPath(); ctx.arc(cx, cy, rp.r, 0, Math.PI*2); ctx.stroke();
-        ctx.restore();
-      }
+      if(a>0.01){ ctx.save(); ctx.strokeStyle = acc(a); ctx.lineWidth = rp.w * (0.4 + rp.life*0.8); ctx.beginPath(); ctx.arc(cx, cy, rp.r, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
     });
     ripples = ripples.filter(rp=>rp.life>0);
-
-    // 원형 스펙트럼 막대 (좌우 대칭)
     const bars = 128;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.lineCap='round';
+    ctx.save(); ctx.translate(cx, cy); ctx.lineCap='round';
     for(let i=0;i<bars;i++){
       const half = i < bars/2 ? i : (bars-1-i);
       const raw = isStatic ? 0.05 : logBandValue(half, bars/2, 55, 12000);
@@ -1721,16 +1449,11 @@
       const ang = (i/bars)*Math.PI*2 - Math.PI/2;
       const len = 6 + v*(60 + intensity*220);
       const c = Math.cos(ang), s = Math.sin(ang);
-      ctx.strokeStyle = acc(0.24 + raw*0.72);
-      ctx.lineWidth = 2.5 + raw*6;
-      ctx.beginPath();
-      ctx.moveTo(c*r0, s*r0);
-      ctx.lineTo(c*(r0+len), s*(r0+len));
-      ctx.stroke();
+      ctx.strokeStyle = acc(0.24 + raw*0.72); ctx.lineWidth = 2.5 + raw*6;
+      ctx.beginPath(); ctx.moveTo(c*r0, s*r0); ctx.lineTo(c*(r0+len), s*(r0+len)); ctx.stroke();
     }
     ctx.restore();
   }
-
   function drawFrequencyPulseRing(cx,cy,cardW,cardH,isStatic){
     if(!frequencyPulse) return;
     const intensity = Math.max(0,Math.min(1,frequencyPulseIntensity/100));
@@ -1741,37 +1464,25 @@
     const active = Math.pow(loudGate,1.8);
     const maxAmp = (14 + intensity*92) * active;
     const points = 220;
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.lineJoin='round';
-    ctx.lineCap='round';
+    ctx.save(); ctx.translate(cx,cy); ctx.lineJoin='round'; ctx.lineCap='round';
     ctx.strokeStyle=acc(0.28 + intensity*0.42 + active*0.22);
     ctx.lineWidth=1.7 + intensity*2.8 + active*1.6;
-    ctx.shadowColor=acc(0.28 + active*0.35);
-    ctx.shadowBlur=8 + intensity*14 + active*18;
+    ctx.shadowColor=acc(0.28 + active*0.35); ctx.shadowBlur=8 + intensity*14 + active*18;
     ctx.beginPath();
     for(let i=0;i<=points;i++){
-      const p=i/points;
-      const angle=p*Math.PI*2-Math.PI/2;
+      const p=i/points; const angle=p*Math.PI*2-Math.PI/2;
       let wave=0;
-      if(!isStatic && timeData?.length){
-        const idx=Math.min(timeData.length-1,Math.floor(p*(timeData.length-1)));
-        wave=(timeData[idx]-128)/128;
-      }
+      if(!isStatic && timeData?.length){ const idx=Math.min(timeData.length-1,Math.floor(p*(timeData.length-1))); wave=(timeData[idx]-128)/128; }
       const heartbeat = Math.sin(angle*2 + getRenderTime()*5.5)*smBass*0.18;
       const radius=baseR + (wave*0.92 + heartbeat)*maxAmp;
       const x=Math.cos(angle)*radius, y=Math.sin(angle)*radius;
       if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
-    ctx.closePath();
-    ctx.stroke();
-    ctx.restore();
+    ctx.closePath(); ctx.stroke(); ctx.restore();
   }
-
   function drawOrbitStars(cardX,cardY,cardW,cardH,isStatic){
     const count = Math.max(0, Math.round(Number(els.starCount.value) || 0));
     if(count <= 0) return;
-
     const starSize = 12 + (els.intensity.value/100)*22;
     const speed = 0.035 + (els.float.value/100)*0.18;
     const twinkle = els.twinkle.value/100;
@@ -1779,25 +1490,12 @@
     const orbitPad = Math.max(18, Math.min(cardW,cardH)*0.075);
     const gap = 0.018 + (1 - Math.min(1, count/16))*0.014;
     const headPhase = (time * speed) % 1;
-
     const discOrbit = mainImageMode==='disc' && Math.abs(cardW-cardH) < 1;
     const discOrbitRadius = cardW/2 + orbitPad;
-
-    ctx.save();
-    ctx.strokeStyle = acc(0.10 + smEnergy*0.10);
-    ctx.lineWidth = 2.1;
-    ctx.shadowColor = acc(0.18 + smEnergy*0.12);
-    ctx.shadowBlur = 12;
-    if(discOrbit){
-      ctx.beginPath();
-      ctx.arc(cardX+cardW/2, cardY+cardH/2, discOrbitRadius, 0, Math.PI*2);
-      ctx.stroke();
-    }else{
-      roundRectPath(cardX-orbitPad, cardY-orbitPad, cardW+orbitPad*2, cardH+orbitPad*2, Math.max(14, orbitPad*0.65));
-      ctx.stroke();
-    }
+    ctx.save(); ctx.strokeStyle = acc(0.10 + smEnergy*0.10); ctx.lineWidth = 2.1; ctx.shadowColor = acc(0.18 + smEnergy*0.12); ctx.shadowBlur = 12;
+    if(discOrbit){ ctx.beginPath(); ctx.arc(cardX+cardW/2, cardY+cardH/2, discOrbitRadius, 0, Math.PI*2); ctx.stroke(); }
+    else{ roundRectPath(cardX-orbitPad, cardY-orbitPad, cardW+orbitPad*2, cardH+orbitPad*2, Math.max(14, orbitPad*0.65)); ctx.stroke(); }
     ctx.restore();
-
     for(let i=0;i<count;i++){
       const phase = (headPhase - i*gap + 1) % 1;
       const p = discOrbit ? getDiscOrbitPoint(phase, cardX+cardW/2, cardY+cardH/2, discOrbitRadius) : getOrbitPoint(phase, cardX, cardY, cardW, cardH, orbitPad);
@@ -1808,29 +1506,16 @@
       const alpha = Math.min(1, 0.32 + rank*0.55 + twinkle*0.18 + smEnergy*0.16);
       const spin = time*(0.65 + rank*0.25) + i*0.3;
       drawSparkleShape(p.x, p.y, size, spin, alpha);
-
       if(particles && !isStatic && i < Math.max(2, Math.ceil(count*0.40))){
         const particleChance = 0.045 + twinkle*0.07 + glowEnvelope*0.14;
         if(Math.random() < particleChance){
-          const dx=p.x-(cardX+cardW/2);
-          const dy=p.y-(cardY+cardH/2);
-          const len=Math.max(1,Math.hypot(dx,dy));
-          const nx=dx/len, ny=dy/len;
+          const dx=p.x-(cardX+cardW/2), dy=p.y-(cardY+cardH/2);
+          const len=Math.max(1,Math.hypot(dx,dy)); const nx=dx/len, ny=dy/len;
           const burst = glowEnvelope>0.55 && Math.random()<0.35 ? 2 : 1;
-
           for(let k=0;k<burst;k++){
             const outward=1.7 + Math.random()*3.4 + glowEnvelope*3.2;
             const side=(Math.random()-0.5)*(1.4 + twinkle*1.8);
-            sparkles.push({
-              x:p.x + nx*(3+Math.random()*7),
-              y:p.y + ny*(3+Math.random()*7),
-              vx:nx*outward - ny*side,
-              vy:ny*outward + nx*side,
-              life:0.82 + Math.random()*0.42,
-              size:5.5 + Math.random()*7.5,
-              spin:Math.random()*Math.PI*2,
-              spinVel:(Math.random()-0.5)*0.22
-            });
+            sparkles.push({ x:p.x + nx*(3+Math.random()*7), y:p.y + ny*(3+Math.random()*7), vx:nx*outward - ny*side, vy:ny*outward + nx*side, life:0.82 + Math.random()*0.42, size:5.5 + Math.random()*7.5, spin:Math.random()*Math.PI*2, spinVel:(Math.random()-0.5)*0.22 });
           }
           if(sparkles.length>180) sparkles.splice(0,sparkles.length-180);
         }
@@ -1838,70 +1523,87 @@
     }
   }
 
+  // ---------- 자막 (2줄: 원문 + 번역, 드래그 이동) ----------
   function rgbaFromHex(hex,alpha){
     const value=String(hex||'#ffffff').replace('#','');
     const full=value.length===3 ? value.split('').map(ch=>ch+ch).join('') : value.padEnd(6,'f').slice(0,6);
     const r=parseInt(full.slice(0,2),16), g=parseInt(full.slice(2,4),16), b=parseInt(full.slice(4,6),16);
     return `rgba(${r},${g},${b},${Math.max(0,Math.min(1,alpha))})`;
   }
-
   function fitSubtitleFont(text,basePx,weight){
-    let px=Math.max(12,basePx);
-    const stack=getTitleFontStack('default');
-    ctx.font=`${weight} ${px}px ${stack}`;
-    const maxWidth=W*0.86;
-    while(px>12 && ctx.measureText(text).width>maxWidth){
-      px*=0.94;
-      ctx.font=`${weight} ${px}px ${stack}`;
-    }
+    let px=Math.max(12,basePx); const stack=getTitleFontStack('default');
+    ctx.font=`${weight} ${px}px ${stack}`; const maxWidth=W*0.86;
+    while(px>12 && ctx.measureText(text).width>maxWidth){ px*=0.94; ctx.font=`${weight} ${px}px ${stack}`; }
     return px;
   }
-
-  function drawSubtitleLine(text,y,basePx,alpha,weight){
-    if(!text) return;
+  function drawSubtitleLine(text,x,y,basePx,alpha,weight){
+    if(!text) return 0;
     const px=fitSubtitleFont(text,basePx,weight);
     ctx.font=`${weight} ${px}px ${getTitleFontStack('default')}`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle=rgbaFromHex(subtitleColor,alpha);
-    if(subtitleShadow){
-      ctx.shadowColor=`rgba(0,0,0,${0.82*alpha})`;
-      ctx.shadowBlur=Math.max(8,px*0.24);
-      ctx.shadowOffsetY=Math.max(2,px*0.06);
-    }else{
-      ctx.shadowColor='rgba(0,0,0,0)';
-      ctx.shadowBlur=0;
-      ctx.shadowOffsetY=0;
-    }
-    ctx.fillText(text,W/2,y);
+    if(subtitleShadow){ ctx.shadowColor=`rgba(0,0,0,${0.82*alpha})`; ctx.shadowBlur=Math.max(8,px*0.24); ctx.shadowOffsetY=Math.max(2,px*0.06); }
+    else { ctx.shadowColor='rgba(0,0,0,0)'; ctx.shadowBlur=0; ctx.shadowOffsetY=0; }
+    ctx.fillText(text,x,y);
+    return ctx.measureText(text).width;
   }
-
   function drawSubtitles(isStatic){
+    subtitleBounds=null;
     if(!subtitlesEnabled || !lyricLines.length) return;
+    const t=audio.currentTime||0;
     let index;
-    if(!isStatic || running || isRecording) index=getActiveLyricIndex(audio.currentTime||0);
-    else if(activeMode==='subtitle') index=cueCursor>=0 ? cueCursor : (cueLogs.length ? getActiveLyricIndex(audio.currentTime||0) : 0);
-    else index=getActiveLyricIndex(audio.currentTime||0);
+    if(!isStatic || running || isRecording || cueLogs.length) index=getActiveLyricIndex(t);
+    else if(activeMode==='subtitle') index = cueCursor>=0 ? cueCursor : 0;
+    else index=-1;
     if(index<0 || !lyricLines[index]) return;
+
     const scale=H/1080;
-    const currentPx=Math.max(18,subtitleFontSize*scale);
-    const sidePx=currentPx*0.70;
-    const gap=currentPx*1.13;
-    const y=subtitleYRatio*H;
+    const aPx=Math.max(16,subtitleFontSize*scale);   // 현재 원문
+    const bPx=aPx*0.66;                               // 현재 번역
+    const sideAPx=aPx*0.60;                           // 이전/다음 원문
+    const sideBPx=sideAPx*0.74;                       // 이전/다음 번역
+    const cxp=subtitleX*W;
+    const lineGap=aPx*0.10;
+    const blockGap=aPx*0.5;
+
+    function rowsFor(cue, cur){
+      if(!cue) return [];
+      const rows=[];
+      const aAlpha = cur?1:subtitleSideOpacity;
+      rows.push({text:cue.a||'', px:cur?aPx:sideAPx, weight:cur?850:700, alpha:aAlpha});
+      if(cue.b) rows.push({text:cue.b, px:cur?bPx:sideBPx, weight:cur?750:650, alpha:cur?Math.min(1,subtitleSideOpacity+0.55):subtitleSideOpacity*0.9});
+      return rows;
+    }
+    const prevRows=rowsFor(lyricLines[index-1],false);
+    const curRows =rowsFor(lyricLines[index],true);
+    const nextRows=rowsFor(lyricLines[index+1],false);
+
+    function blockHeight(rows){ if(!rows.length) return 0; let h=0; rows.forEach((r,i)=>{ h+=r.px*1.02; if(i<rows.length-1) h+=lineGap; }); return h; }
+    const hCur=blockHeight(curRows);
+    const anchorY=subtitleYRatio*H;
+    const curTop=anchorY - hCur/2;
+
+    let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
     ctx.save();
-    drawSubtitleLine(lyricLines[index-1]||'',y-gap,sidePx,subtitleSideOpacity,650);
-    drawSubtitleLine(lyricLines[index],y,currentPx,1,850);
-    drawSubtitleLine(lyricLines[index+1]||'',y+gap,sidePx,subtitleSideOpacity,650);
+    function drawBlock(rows, topY){
+      let y=topY;
+      rows.forEach((r,i)=>{
+        const lh=r.px*1.02; const cyLine=y+lh/2;
+        const w=drawSubtitleLine(r.text,cxp,cyLine,r.px,r.alpha,r.weight);
+        if(r.text){ left=Math.min(left,cxp-w/2); right=Math.max(right,cxp+w/2); top=Math.min(top,cyLine-lh/2); bottom=Math.max(bottom,cyLine+lh/2); }
+        y+=lh + (i<rows.length-1?lineGap:0);
+      });
+      return y;
+    }
+    drawBlock(curRows, curTop);
+    if(prevRows.length) drawBlock(prevRows, curTop - blockGap - blockHeight(prevRows));
+    if(nextRows.length) drawBlock(nextRows, curTop + hCur + blockGap);
     ctx.restore();
+    if(left<=right) subtitleBounds={left,right,top,bottom,width:right-left,height:bottom-top};
   }
 
   // ---------- render ----------
-  function drawStatic(){
-    smBass=smMid=smEnergy=0;
-    prevBass=prevRms=0;
-    glowEnvelope=0;
-    renderFrame(true);
-  }
+  function drawStatic(){ smBass=smMid=smEnergy=0; prevBass=prevRms=0; glowEnvelope=0; renderFrame(true); }
 
   function renderFrame(isStatic){
     if(bgType==='image' && bgImage && bgImage.complete && bgImage.naturalWidth){
@@ -1915,40 +1617,24 @@
       else                            grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0,bgGradientColor1); grad.addColorStop(1,bgGradientColor2);
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-    } else {
-      ctx.fillStyle = bgSolidColor; ctx.fillRect(0,0,W,H);
-    }
+    } else { ctx.fillStyle = bgSolidColor; ctx.fillRect(0,0,W,H); }
 
     const vg = ctx.createRadialGradient(W/2,H*0.43,H*0.15, W/2,H*0.43,W*0.72);
-    vg.addColorStop(0,'rgba(0,0,0,0)');
-    vg.addColorStop(1,'rgba(0,0,0,0.20)');
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.20)');
     ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 
-    if(showTitleGuide && title && !isRecording){
-      drawTitleGuide();
-    }
+    if(showTitleGuide && title && !isRecording){ drawTitleGuide(); }
 
     let bass=0, mid=0, energy=0, rms=0;
     if(!isStatic && analyser){
-      analyser.getByteFrequencyData(freqData);
-      analyser.getByteTimeDomainData(timeData);
-
-      bass = averageFrequency(38,210);
-      mid = averageFrequency(210,2600);
-
+      analyser.getByteFrequencyData(freqData); analyser.getByteTimeDomainData(timeData);
+      bass = averageFrequency(38,210); mid = averageFrequency(210,2600);
       let esum=0, sq=0;
       for(let i=0;i<freqData.length;i++) esum+=freqData[i];
-      for(let i=0;i<timeData.length;i++){
-        const v=(timeData[i]-128)/128;
-        sq+=v*v;
-      }
-      energy=(esum/freqData.length)/255;
-      rms=Math.sqrt(sq/Math.max(1,timeData.length));
+      for(let i=0;i<timeData.length;i++){ const v=(timeData[i]-128)/128; sq+=v*v; }
+      energy=(esum/freqData.length)/255; rms=Math.sqrt(sq/Math.max(1,timeData.length));
     }
-
-    smBass  += (bass  - smBass )*0.34;
-    smMid   += (mid   - smMid  )*0.28;
-    smEnergy+= (energy- smEnergy)*0.24;
+    smBass  += (bass  - smBass )*0.34; smMid += (mid - smMid)*0.28; smEnergy+= (energy- smEnergy)*0.24;
 
     if(!isStatic){
       const loud = rms*0.70 + bass*0.30;
@@ -1956,20 +1642,12 @@
       loudCeil  += (loud-loudCeil)  * (loud>loudCeil  ? 0.055 : 0.0012);
       if(loudCeil < loudFloor+0.025) loudCeil=loudFloor+0.025;
       const level=Math.max(0,Math.min(1,(loud-loudFloor)/(loudCeil-loudFloor)));
-
-      const bassRise=Math.max(0,bass-prevBass);
-      const rmsRise=Math.max(0,rms-prevRms);
+      const bassRise=Math.max(0,bass-prevBass); const rmsRise=Math.max(0,rms-prevRms);
       const onset=Math.min(1,bassRise*9.5 + rmsRise*14.0);
       const target=Math.min(1,level*0.42 + onset*1.15);
-
-      if(target>glowEnvelope) glowEnvelope += (target-glowEnvelope)*0.82;
-      else glowEnvelope *= 0.885;
-
-      prevBass=bass;
-      prevRms=rms;
-    } else {
-      glowEnvelope=0;
-    }
+      if(target>glowEnvelope) glowEnvelope += (target-glowEnvelope)*0.82; else glowEnvelope *= 0.885;
+      prevBass=bass; prevRms=rms;
+    } else { glowEnvelope=0; }
 
     const mainMetrics = getMainImageMetrics();
     const cx = mainMetrics ? mainMetrics.cx : W/2;
@@ -1984,14 +1662,11 @@
     const glowStrength = Math.max(0,Math.min(1,(Number(els.backGlow.value) || 0) / 100));
     const glowAmt = Math.pow(glowStrength, 1.9);
     const pulseRaw = isStatic ? 0 : Math.max(0,Math.min(1,glowEnvelope));
-    const rawPulse = Math.pow(pulseRaw, 0.86);
-    const rawBoom = Math.pow(pulseRaw, 1.25);
-    const pulse = rawPulse * glowAmt;
-    const boom = rawBoom * glowAmt;
+    const rawPulse = Math.pow(pulseRaw, 0.86); const rawBoom = Math.pow(pulseRaw, 1.25);
+    const pulse = rawPulse * glowAmt; const boom = rawBoom * glowAmt;
 
     if(glowStrength > 0.001){
       const baseFade = glowAmt * 0.010;
-
       const outerR = halo*(0.06 + glowAmt*0.34 + pulse*(0.32 + glowAmt*0.62) + boom*(0.34 + glowAmt*0.92));
       const outer = ctx.createRadialGradient(cx,cy,halo*0.08,cx,cy,outerR);
       outer.addColorStop(0,acc(baseFade + glowAmt*0.010 + pulse*0.025));
@@ -1999,31 +1674,24 @@
       outer.addColorStop(0.52,acc(baseFade + glowAmt*0.038 + pulse*0.12 + boom*0.11));
       outer.addColorStop(0.80,acc(baseFade + pulse*0.055 + boom*0.045));
       outer.addColorStop(1,acc(0));
-      ctx.fillStyle=outer;
-      ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
-
+      ctx.fillStyle=outer; ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
       const midR = halo*(0.04 + glowAmt*0.24 + pulse*(0.22 + glowAmt*0.40) + boom*(0.20 + glowAmt*0.38));
       const midGlow = ctx.createRadialGradient(cx,cy,halo*0.04,cx,cy,midR);
       midGlow.addColorStop(0,acc(baseFade + glowAmt*0.016 + pulse*0.040));
       midGlow.addColorStop(0.36,acc(baseFade + pulse*0.095 + boom*0.055));
       midGlow.addColorStop(0.70,acc(baseFade + pulse*0.13 + boom*0.10));
       midGlow.addColorStop(1,acc(0));
-      ctx.fillStyle=midGlow;
-      ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
-
+      ctx.fillStyle=midGlow; ctx.beginPath(); ctx.arc(cx,cy,midR,0,Math.PI*2); ctx.fill();
       const coreR = halo*(0.018 + glowAmt*0.14 + pulse*(0.10 + glowAmt*0.16));
       const core = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
       core.addColorStop(0,acc(baseFade + glowAmt*0.030 + pulse*0.11 + boom*0.08));
       core.addColorStop(0.45,acc(baseFade + pulse*0.075 + boom*0.05));
       core.addColorStop(1,acc(0));
-      ctx.fillStyle=core;
-      ctx.beginPath(); ctx.arc(cx,cy,coreR,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=core; ctx.beginPath(); ctx.arc(cx,cy,coreR,0,Math.PI*2); ctx.fill();
     }
 
-    // 이퀄라이저 링 (썸네일 주변 파장)
     drawEqRing(cx, cy, cardW, cardH, isStatic);
     drawFrequencyPulseRing(cx, cy, cardW, cardH, isStatic);
-
     drawOrbitStars(cardX, cardY, cardW, cardH, isStatic);
 
     if(particles && !isStatic && Number(els.starCount.value)===0){
@@ -2033,23 +1701,11 @@
         const phase=Math.random();
         const discOrbit = mainImageMode==='disc' && Math.abs(cardW-cardH) < 1;
         const p = discOrbit ? getDiscOrbitPoint(phase, cx, cy, cardW/2 + orbitPad) : getOrbitPoint(phase,cardX,cardY,cardW,cardH,orbitPad);
-        const dx=p.x-cx, dy=p.y-cy;
-        const len=Math.max(1,Math.hypot(dx,dy));
-        const nx=dx/len, ny=dy/len;
+        const dx=p.x-cx, dy=p.y-cy; const len=Math.max(1,Math.hypot(dx,dy)); const nx=dx/len, ny=dy/len;
         const burst=glowEnvelope>0.55 ? 2 : 1;
         for(let k=0;k<burst;k++){
-          const outward=1.8+Math.random()*3.6+glowEnvelope*3.5;
-          const side=(Math.random()-0.5)*2.4;
-          sparkles.push({
-            x:p.x+nx*(3+Math.random()*7),
-            y:p.y+ny*(3+Math.random()*7),
-            vx:nx*outward-ny*side,
-            vy:ny*outward+nx*side,
-            life:0.82+Math.random()*0.42,
-            size:5.5+Math.random()*7.5,
-            spin:Math.random()*Math.PI*2,
-            spinVel:(Math.random()-0.5)*0.22
-          });
+          const outward=1.8+Math.random()*3.6+glowEnvelope*3.5; const side=(Math.random()-0.5)*2.4;
+          sparkles.push({ x:p.x+nx*(3+Math.random()*7), y:p.y+ny*(3+Math.random()*7), vx:nx*outward-ny*side, vy:ny*outward+nx*side, life:0.82+Math.random()*0.42, size:5.5+Math.random()*7.5, spin:Math.random()*Math.PI*2, spinVel:(Math.random()-0.5)*0.22 });
         }
       }
     }
@@ -2062,43 +1718,26 @@
           ctx.shadowColor = acc(rimGlowAmt*0.05 + pulse*0.82 + boom*0.22);
           ctx.shadowBlur = rimGlowAmt*14 + pulse*240 + boom*140;
           ctx.fillStyle='#000';
-          if(mainImageMode==='disc'){
-            const silhouette = makeDonutPath(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,getDiscHoleRadius(mainMetrics));
-            ctx.fill(silhouette,'evenodd');
-          }else{
-            roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius); ctx.fill();
-          }
+          if(mainImageMode==='disc'){ const silhouette = makeDonutPath(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,getDiscHoleRadius(mainMetrics)); ctx.fill(silhouette,'evenodd'); }
+          else{ roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius); ctx.fill(); }
         }
         ctx.restore();
-
         drawMainImage(img, mainMetrics);
-
         if(rimGlowAmt>0.0001){
           ctx.save();
-          if(mainImageMode==='disc'){
-            ctx.beginPath(); ctx.arc(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,0,Math.PI*2);
-          }else{
-            roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius);
-          }
+          if(mainImageMode==='disc'){ ctx.beginPath(); ctx.arc(mainMetrics.cx,mainMetrics.cy,mainMetrics.w/2,0,Math.PI*2); }
+          else{ roundRectPath(mainMetrics.x,mainMetrics.y,mainMetrics.w,mainMetrics.h,radius); }
           ctx.strokeStyle = acc(rimGlowAmt*0.12 + pulse*0.74 + boom*0.12);
-          ctx.lineWidth = 0.5 + rimGlowAmt*0.8 + pulse*8.6 + boom*2.6;
-          ctx.stroke();
-          ctx.restore();
+          ctx.lineWidth = 0.5 + rimGlowAmt*0.8 + pulse*8.6 + boom*2.6; ctx.stroke(); ctx.restore();
         }
         drawMainImageSelection(mainMetrics);
       }catch(e){ ctx.restore(); }
     }
 
     sparkles.forEach(s=>{
-      s.x+=s.vx; s.y+=s.vy;
-      s.life-=0.014;
-      s.vx*=0.972; s.vy*=0.972;
-      s.spin=(s.spin||0)+(s.spinVel||0);
-      const fade=Math.max(0,Math.min(1,s.life));
-      const sz=s.size*(0.35+fade*0.65);
-      if(sz>0.8){
-        drawSparkleShape(s.x,s.y,sz,s.spin,fade*0.95);
-      }
+      s.x+=s.vx; s.y+=s.vy; s.life-=0.014; s.vx*=0.972; s.vy*=0.972; s.spin=(s.spin||0)+(s.spinVel||0);
+      const fade=Math.max(0,Math.min(1,s.life)); const sz=s.size*(0.35+fade*0.65);
+      if(sz>0.8){ drawSparkleShape(s.x,s.y,sz,s.spin,fade*0.95); }
     });
     sparkles=sparkles.filter(s=>s.life>0);
 
@@ -2106,64 +1745,54 @@
 
     if(title){
       ctx.save();
-      const scale=H/1080;
-      const fontPx=Math.max(12,titleFontSize*scale);
-      const spacing=titleLetterSpacing*scale;
+      const scale=H/1080; const fontPx=Math.max(12,titleFontSize*scale); const spacing=titleLetterSpacing*scale;
       const tx=titleX*W, ty=titleY*H;
-      ctx.font = `800 ${fontPx}px ${getTitleFontStack(titleFont)}`;
-      ctx.textBaseline='middle';
-      if(titleShadow){
-        ctx.shadowColor='rgba(0,0,0,0.8)';
-        ctx.shadowBlur=18*scale;
-      }else{
-        ctx.shadowColor='rgba(0,0,0,0)';
-        ctx.shadowBlur=0;
-      }
+      ctx.font = `800 ${fontPx}px ${getTitleFontStack(titleFont)}`; ctx.textBaseline='middle';
+      if(titleShadow){ ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=18*scale; } else { ctx.shadowColor='rgba(0,0,0,0)'; ctx.shadowBlur=0; }
       ctx.fillStyle=titleColor;
       const measuredWidth=measureSpacedText(title,spacing);
       fillSpacedText(title,tx,ty,spacing);
       const measuredHeight=fontPx*1.18;
-      titleBounds={
-        left:tx-measuredWidth/2,
-        right:tx+measuredWidth/2,
-        top:ty-measuredHeight/2,
-        bottom:ty+measuredHeight/2,
-        width:measuredWidth,
-        height:measuredHeight
-      };
+      titleBounds={ left:tx-measuredWidth/2, right:tx+measuredWidth/2, top:ty-measuredHeight/2, bottom:ty+measuredHeight/2, width:measuredWidth, height:measuredHeight };
       ctx.restore();
-    }else{
-      titleBounds=null;
-    }
+    }else{ titleBounds=null; }
 
     drawSubtitles(isStatic);
   }
 
-  function loop(){
-    if(!running) return;
-    try { renderFrame(false); }
-    catch(e){ if(window.console) console.warn('frame skipped:', e); }
-    requestAnimationFrame(loop);
-  }
+  function loop(){ if(!running) return; try { renderFrame(false); } catch(e){ if(window.console) console.warn('frame skipped:', e); } requestAnimationFrame(loop); }
 
-  // ---------- play ----------
-  els.playBtn.addEventListener('click', async ()=>{
+  // ---------- seek bar ----------
+  function updateSeekUi(){
+    const d=audio.duration||0;
+    if(els.seekCur) els.seekCur.textContent=formatTime(audio.currentTime||0);
+    if(els.seekDur) els.seekDur.textContent=formatTime(d);
+    if(els.seekBar && !seeking && d>0){ els.seekBar.value=String(Math.round((audio.currentTime/d)*1000)); }
+  }
+  function setPlayLabels(playing){
+    els.playBtn.textContent = playing ? '❚❚ 일시정지' : '▶ 재생';
+    if(els.seekToggle) els.seekToggle.textContent = playing ? '❚❚' : '▶';
+  }
+  async function togglePlay(){
+    if(!img || !audio.src) return;
     initAudio();
     if(audioCtx.state==='suspended') await audioCtx.resume();
-    if(audio.paused){
-      await audio.play();
-      running = true;
-      els.playBtn.textContent='❚❚ 일시정지';
-      loop();
-    } else {
-      audio.pause();
-      running = false;
-      els.playBtn.textContent='▶ 재생';
-    }
-  });
-  audio.addEventListener('ended', ()=>{
-    running=false; els.playBtn.textContent='▶ 재생'; drawStatic();
-  });
+    if(audio.paused){ await audio.play(); running = true; setPlayLabels(true); loop(); }
+    else { audio.pause(); running = false; setPlayLabels(false); }
+  }
+  els.playBtn.addEventListener('click', togglePlay);
+  if(els.seekToggle) els.seekToggle.addEventListener('click', togglePlay);
+  if(els.seekBar){
+    els.seekBar.addEventListener('input', ()=>{
+      const d=audio.duration||0; if(!d) return;
+      seeking=true;
+      audio.currentTime=(Number(els.seekBar.value)/1000)*d;
+      updateSeekUi(); updateLyricUi(getActiveLyricIndex(audio.currentTime||0));
+      if(!running) drawStatic();
+    });
+    els.seekBar.addEventListener('change', ()=>{ seeking=false; });
+  }
+  audio.addEventListener('ended', ()=>{ running=false; setPlayLabels(false); drawStatic(); updateSeekUi(); });
 
   // ---------- record ----------
   const RECORD_PRESETS = {
@@ -2172,102 +1801,61 @@
     '1080_60': {width:1920,height:1080,fps:60,videoBits:30000000,audioBits:320000,label:'1080p 60fps'},
     '1440':    {width:2560,height:1440,fps:30,videoBits:32000000,audioBits:320000,label:'1440p 최고화질'}
   };
-
-  function getRecordPreset(){
-    return RECORD_PRESETS[els.recordQuality.value] || RECORD_PRESETS['1080_60'];
-  }
-
+  function getRecordPreset(){ return RECORD_PRESETS[els.recordQuality.value] || RECORD_PRESETS['1080_60']; }
   function applyCanvasResolution(preset){
     if(canvas.width===preset.width && canvas.height===preset.height) return;
-    canvas.width=preset.width;
-    canvas.height=preset.height;
-    W=canvas.width;
-    H=canvas.height;
-    ctx.imageSmoothingEnabled=true;
-    ctx.imageSmoothingQuality='high';
+    canvas.width=preset.width; canvas.height=preset.height; W=canvas.width; H=canvas.height;
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
     if(!running) drawStatic();
   }
-
-  els.recordQuality.addEventListener('change', ()=>{
-    const preset=getRecordPreset();
-    applyCanvasResolution(preset);
-    setStatus(`<b>${preset.label}</b>로 녹화해요. 예상 화질은 좋아지지만 파일 용량도 커져요.`);
-  });
+  els.recordQuality.addEventListener('change', ()=>{ const preset=getRecordPreset(); applyCanvasResolution(preset); setStatus(`<b>${preset.label}</b>로 녹화해요. 예상 화질은 좋아지지만 파일 용량도 커져요.`); });
 
   let recorder, chunks=[];
   els.recBtn.addEventListener('click', async ()=>{
     initAudio();
     if(audioCtx.state==='suspended') await audioCtx.resume();
-
-    const preset=getRecordPreset();
-    applyCanvasResolution(preset);
-
+    const preset=getRecordPreset(); applyCanvasResolution(preset);
     const canvasStream = canvas.captureStream(preset.fps);
-    const combined = new MediaStream([
-      ...canvasStream.getVideoTracks(),
-      ...streamDest.stream.getAudioTracks()
-    ]);
+    const combined = new MediaStream([ ...canvasStream.getVideoTracks(), ...streamDest.stream.getAudioTracks() ]);
     let mime = '';
-    ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
-      .some(m=>{ if(MediaRecorder.isTypeSupported(m)){ mime=m; return true; } });
-    const recorderOptions = {
-      videoBitsPerSecond:preset.videoBits,
-      audioBitsPerSecond:preset.audioBits
-    };
+    ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].some(m=>{ if(MediaRecorder.isTypeSupported(m)){ mime=m; return true; } });
+    const recorderOptions = { videoBitsPerSecond:preset.videoBits, audioBitsPerSecond:preset.audioBits };
     if(mime) recorderOptions.mimeType=mime;
     try{ recorder = new MediaRecorder(combined, recorderOptions); }
     catch(e){ setStatus('이 브라우저는 선택한 고화질 녹화를 지원하지 않아요. Chrome에서 1080p로 다시 시도해 주세요.'); return; }
-
     chunks=[];
     recorder.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
     recorder.onstop = ()=>{
       isRecording = false;
-      const blob = new Blob(chunks,{type:'video/webm'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href=url; a.download=(title||'music_video').replace(/[^\w가-힣\- ]/g,'')+'.webm';
-      a.click();
+      const blob = new Blob(chunks,{type:'video/webm'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=(title||'music_video').replace(/[^\w가-힣\- ]/g,'')+'.webm'; a.click();
       setStatus('✅ 저장 완료! 다운로드된 <b>.webm</b>을 유튜브에 그대로 올리면 돼요.');
-      els.recBtn.classList.remove('recording');
-      els.recBtn.style.display=''; els.stopRecBtn.style.display='none';
-      els.playBtn.disabled=false;
-      els.recordQuality.disabled=false;
+      els.recBtn.classList.remove('recording'); els.recBtn.style.display=''; els.stopRecBtn.style.display='none';
+      els.playBtn.disabled=false; els.recordQuality.disabled=false;
+      if(els.seekBar) els.seekBar.disabled=false; if(els.seekToggle) els.seekToggle.disabled=false;
     };
-
-    audio.currentTime = 0;
-    await audio.play();
-    running = true; loop();
-    recorder.start(1000);
-    isRecording = true;
-    els.recBtn.classList.add('recording');
-    els.recBtn.style.display='none'; els.stopRecBtn.style.display='';
-    els.playBtn.disabled=true;
-    els.recordQuality.disabled=true;
+    audio.currentTime = 0; await audio.play(); running = true; loop();
+    recorder.start(1000); isRecording = true;
+    els.recBtn.classList.add('recording'); els.recBtn.style.display='none'; els.stopRecBtn.style.display='';
+    els.playBtn.disabled=true; els.recordQuality.disabled=true;
+    if(els.seekBar) els.seekBar.disabled=true; if(els.seekToggle) els.seekToggle.disabled=true;
+    setPlayLabels(true);
     setStatus(`🔴 ${preset.label} · ${preset.fps}fps · 약 ${Math.round(preset.videoBits/1000000)}Mbps로 녹화 중… 노래가 끝나면 자동 저장돼요.`);
-
-    audio.addEventListener('ended', ()=>{
-      if(recorder && recorder.state!=='inactive') recorder.stop();
-    }, {once:true});
+    audio.addEventListener('ended', ()=>{ if(recorder && recorder.state!=='inactive') recorder.stop(); }, {once:true});
   });
-
   els.stopRecBtn.addEventListener('click', ()=>{
-    audio.pause(); running=false; isRecording = false; els.playBtn.textContent='▶ 재생';
+    audio.pause(); running=false; isRecording = false; setPlayLabels(false);
     if(recorder && recorder.state!=='inactive') recorder.stop();
   });
 
   canvas.addEventListener('contextlost', e=>{ e.preventDefault(); }, false);
   canvas.addEventListener('contextrestored', ()=>{ if(!running) drawStatic(); }, false);
 
-  setAccentVar();
-  refreshBgUI();
-  updateOverlayList();
-  updateStickerControlState();
-  updateCueTable();
-  updateLyricUi(-1);
-  setMode('video');
-  applyCanvasResolution(getRecordPreset());
-  drawStatic();
+  setAccentVar(); refreshBgUI(); updateOverlayList(); updateStickerControlState();
+  updateCueTable(); updateLyricUi(-1); setMode('video'); updateSeekUi();
+  applyCanvasResolution(getRecordPreset()); drawStatic();
 })();
+
 </script>
 </body>
 </html>
