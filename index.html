@@ -767,7 +767,7 @@ Hikari no saki e
   function collectVideoSettings(){
     return {
       format:'schat-mv-video-settings',
-      version:1,
+      version:2,
       savedAt:new Date().toISOString(),
       video:{
         recordQuality:els.recordQuality.value,
@@ -807,7 +807,17 @@ Hikari no saki e
           x:item.x, y:item.y, widthRatio:item.widthRatio,
           rotation:item.rotation || 0,
           anim:item.anim || 'none', animSpeed:Number(item.animSpeed)||0
-        })).filter(item=>item.dataUrl)
+        })).filter(item=>item.dataUrl),
+        subtitleStyle:{
+          enabled:subtitlesEnabled,
+          shadow:subtitleShadow,
+          fontSize:subtitleFontSize,
+          x:subtitleX,
+          y:subtitleYRatio,
+          color:subtitleColor,
+          sideOpacity:subtitleSideOpacity,
+          lyricMode:lyricMode
+        }
       }
     };
   }
@@ -825,7 +835,7 @@ Hikari no saki e
       a.click();
       a.remove();
       setTimeout(()=>URL.revokeObjectURL(url), 1200);
-      setStatus('💾 영상 설정 파일을 저장했어요. 다음에는 <b>설정 불러오기</b> 후 새 썸네일 이미지와 노래만 넣으면 돼요.');
+      setStatus('💾 영상·자막 스타일 설정 파일을 저장했어요. 다음에는 <b>설정 불러오기</b> 후 새 썸네일 이미지와 노래, 가사 파일만 넣으면 돼요.');
     }catch(error){
       console.error(error);
       setStatus('설정 파일을 저장하지 못했어요. 배경이나 스티커 이미지 용량이 너무 큰지 확인해 주세요.');
@@ -948,6 +958,26 @@ Hikari no saki e
     updateOverlayList();
     updateStickerControlState();
 
+    const sub = root.subtitleStyle || {};
+    subtitlesEnabled = sub.enabled !== false;
+    subtitleShadow = sub.shadow !== false;
+    subtitleFontSize = clampNumber(sub.fontSize,52,24,96);
+    subtitleX = clampNumber(sub.x,0.5,0.05,0.95);
+    subtitleYRatio = clampNumber(sub.y,0.78,0.30,0.97);
+    subtitleColor = normalizeHex(sub.color,'#ffffff');
+    subtitleSideOpacity = clampNumber(sub.sideOpacity,0.42,0.10,0.90);
+    lyricMode = sub.lyricMode==='double' ? 'double' : 'single';
+
+    els.subtitlesEnabledChip.classList.toggle('on',subtitlesEnabled);
+    els.subtitlesEnabledChip.textContent = subtitlesEnabled ? '자막 표시' : '자막 숨김';
+    els.subtitleShadowChip.classList.toggle('on',subtitleShadow);
+    els.subtitleShadowChip.textContent = subtitleShadow ? '자막 그림자' : '그림자 없음';
+    els.subtitleSize.value = String(Math.round(subtitleFontSize));
+    els.subtitleY.value = String(Math.round(Math.max(45,Math.min(92,subtitleYRatio*100))));
+    els.subtitleColor.value = subtitleColor;
+    els.subtitleSideOpacity.value = String(Math.round(subtitleSideOpacity*100));
+    refreshLyricModeUi();
+
     if(root.recordQuality && RECORD_PRESETS[root.recordQuality]){
       els.recordQuality.value = root.recordQuality;
       applyCanvasResolution(getRecordPreset());
@@ -963,7 +993,7 @@ Hikari no saki e
       const parsed = JSON.parse(raw);
       await applyVideoSettings(parsed);
       if(els.videoSettingsName) els.videoSettingsName.textContent = file.name;
-      setStatus('📂 영상 설정을 불러왔어요. 배경과 스티커까지 복원됐어요. 이제 새 <b>썸네일 이미지</b>와 <b>노래</b>를 넣어주세요.');
+      setStatus('📂 영상·자막 스타일 설정을 불러왔어요. 배경·스티커·자막 위치와 크기까지 복원됐어요. 이제 새 <b>썸네일 이미지</b>, <b>노래</b>, <b>가사 파일</b>을 넣어주세요.');
     }catch(error){
       console.error(error);
       setStatus('설정 파일을 불러오지 못했어요. 이 메이커에서 저장한 <b>.schatmv.json</b> 파일인지 확인해 주세요.');
