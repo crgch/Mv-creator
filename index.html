@@ -26,8 +26,9 @@
   header h1{font-size:21px;margin:0;letter-spacing:-.02em;font-weight:800}
   header .sub{font-size:12px;color:var(--ink-dim)}
   .mode-tabs{margin-left:auto;display:flex;gap:4px;padding:4px;border:1px solid var(--panel-line);border-radius:12px;background:#fff;box-shadow:0 8px 24px -18px rgba(20,20,40,.5)}
-  .mode-tab{appearance:none;border:0;background:transparent;color:var(--ink-dim);border-radius:8px;padding:8px 18px;font:700 13px/1 inherit;cursor:pointer;transition:.15s}
-  .mode-tab.active{background:var(--accent);color:#fff;box-shadow:0 5px 14px -8px rgba(138,82,255,.8)}
+  .mode-tab{appearance:none;border:1px solid rgba(138,82,255,.24);background:rgba(138,82,255,.10);color:#6e38d5;border-radius:8px;padding:8px 18px;font:700 13px/1 inherit;cursor:pointer;transition:.15s}
+  .mode-tab:hover{background:rgba(138,82,255,.18);border-color:rgba(138,82,255,.42)}
+  .mode-tab.active{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:0 5px 14px -8px rgba(138,82,255,.8)}
   .preview-layout{width:min(100%,1120px);display:grid;grid-template-columns:minmax(0,1.75fr) minmax(320px,.95fr);
     gap:12px;align-items:stretch;margin:0 auto}
   .stage-wrap{position:relative;width:100%;aspect-ratio:16/9;margin:0;border-radius:var(--radius);
@@ -48,8 +49,8 @@
   .seek-bar{width:min(100%,1120px);margin:10px auto 0;display:flex;align-items:center;gap:12px}
   .seek-bar .seek-time{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums;min-width:66px;text-align:center}
   .seek-bar input[type=range]{flex:1;min-width:0;accent-color:var(--accent);cursor:pointer}
-  .seek-mini{width:42px;height:42px;border-radius:11px;border:1px solid var(--panel-line);background:#fff;color:var(--accent);font-size:15px;font-weight:800;cursor:pointer;flex:0 0 auto;transition:.15s}
-  .seek-mini:hover:not(:disabled){border-color:var(--accent);background:rgba(138,82,255,.08)}
+  .seek-mini{width:42px;height:42px;border-radius:11px;border:1px solid rgba(138,82,255,.34);background:rgba(138,82,255,.12);color:#6d36d5;font-size:15px;font-weight:800;cursor:pointer;flex:0 0 auto;transition:.15s}
+  .seek-mini:hover:not(:disabled){border-color:var(--accent);background:rgba(138,82,255,.22)}
   .seek-mini:disabled{opacity:.4;cursor:not-allowed}
 
   .controls{width:min(100%,1120px);margin:16px auto 0;column-count:2;column-gap:12px}
@@ -87,7 +88,13 @@
   select{background:#f5f6f8;border:1px solid var(--panel-line);color:var(--ink);border-radius:8px;
     padding:9px 11px;font-size:14px;font-family:inherit}
   input[type=range]{width:100%;accent-color:var(--accent)}
-  .swatch{width:34px;height:34px;border-radius:8px;border:1px solid var(--panel-line);padding:0;cursor:pointer;background:none}
+  .swatch{width:34px;height:34px;border-radius:8px;border:1px solid rgba(138,82,255,.34);padding:0;cursor:pointer;background:none}
+  .color-picker-btn{appearance:none;border:1px solid rgba(138,82,255,.38);background:rgba(138,82,255,.12);color:#6730cf;border-radius:9px;padding:8px 11px;font:800 11px/1 inherit;cursor:pointer;transition:.15s;white-space:nowrap}
+  .color-picker-btn:hover,.color-picker-btn.is-picking{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 16px -10px rgba(138,82,255,.9)}
+  .stage-wrap.color-picking{box-shadow:0 0 0 3px rgba(138,82,255,.65),0 18px 44px -22px rgba(20,20,40,.5)}
+  .stage-wrap.color-picking canvas{cursor:crosshair !important}
+  .canvas-color-picker-notice{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:8;display:none;max-width:calc(100% - 32px);padding:10px 14px;border-radius:999px;background:rgba(73,36,151,.92);color:#fff;font-size:12px;font-weight:800;text-align:center;box-shadow:0 10px 28px -14px rgba(25,8,60,.9);pointer-events:none}
+  .stage-wrap.color-picking .canvas-color-picker-notice{display:block}
 
   .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
   button.act{border:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:700;
@@ -96,15 +103,17 @@
   .play{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
   .rec{background:var(--danger)}
   .rec.recording{animation:pulse 1s infinite}
-  .ghost{background:#eceef2;color:var(--ink)}
+  .ghost{background:linear-gradient(135deg,var(--accent),#6f38df);color:#fff;box-shadow:0 7px 18px -12px rgba(138,82,255,.9)}
+  .ghost:hover:not(:disabled){filter:brightness(1.06);transform:translateY(-1px)}
   @keyframes pulse{50%{opacity:.55}}
 
   .status{font-size:12px;color:var(--ink-dim);margin-top:10px;min-height:16px}
   .status b{color:var(--accent)}
   .toggle-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-  .chip{border:1px solid var(--panel-line);background:#f1f2f5;color:var(--ink-dim);
-    border-radius:20px;padding:6px 13px;font-size:12px;cursor:pointer;transition:.15s}
-  .chip.on{border-color:var(--accent);color:var(--accent);background:rgba(138,82,255,.12)}
+  .chip{border:1px solid rgba(138,82,255,.34);background:rgba(138,82,255,.11);color:#6d36d5;
+    border-radius:20px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--accent);background:rgba(138,82,255,.20)}
+  .chip.on{border-color:var(--accent);color:#fff;background:var(--accent);box-shadow:0 5px 14px -9px rgba(138,82,255,.9)}
   audio{display:none}
   .wrap>.card{width:min(100%,1120px);margin:12px auto 0 !important}
   .foot{width:min(100%,1120px);margin:20px auto 0;font-size:12px;color:var(--ink-dim);line-height:1.7}
@@ -137,7 +146,8 @@
   .cue-table input[type=number]{width:100px;padding:7px 8px;font-variant-numeric:tabular-nums}
   .cue-table .lyric-cell{max-width:640px;word-break:keep-all;overflow-wrap:anywhere}
   .cue-end-note{margin-top:4px;font-size:10px;color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .mini-act{border:1px solid var(--panel-line);background:#fff;color:var(--ink);border-radius:7px;padding:6px 9px;font:700 11px/1 inherit;cursor:pointer}
+  .mini-act{border:1px solid rgba(138,82,255,.34);background:rgba(138,82,255,.11);color:#6630ce;border-radius:7px;padding:6px 9px;font:700 11px/1 inherit;cursor:pointer;transition:.15s}
+  .mini-act:hover{background:var(--accent);border-color:var(--accent);color:#fff}
   .empty-log{padding:18px;text-align:center;color:var(--ink-dim)}
   .settings-card{column-span:all;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 18px}
   .settings-card-copy{min-width:0;flex:1}
@@ -203,6 +213,7 @@
         <div class="big">캐릭터 이미지와 노래를 넣어주세요</div>
         <div>이미지 뒤 후광과 음파 링이 음악에 맞춰 커졌다 작아지고, 별은 궤도를 따라 돌아요</div>
       </div>
+      <div class="canvas-color-picker-notice" id="canvasColorPickerNotice">🎯 캔버스에서 원하는 색을 클릭하세요 · ESC로 취소</div>
     </div>
 
     <aside class="card preview-actions">
@@ -241,6 +252,8 @@
         <div class="filename" id="videoSettingsName"></div>
       </div>
       <div class="btns settings-actions">
+        <button type="button" class="act ghost" id="applyDefaultTemplate1Btn">✨ 두줄가사 기본 템플릿</button>
+        <button type="button" class="act ghost" id="applyDefaultTemplate2Btn">✨ 한줄가사 기본 템플릿</button>
         <button type="button" class="act ghost" id="saveVideoSettingsBtn">💾 설정 저장 (파일)</button>
         <button type="button" class="act ghost" id="loadVideoSettingsBtn">📂 설정 불러오기</button>
       </div>
@@ -655,10 +668,14 @@ Hikari no saki e
   let subtitleBounds = null;
   let subtitleDragging = false;
   let subtitleDragOffset = {x:0,y:0};
+  let canvasColorPickTarget = null;
+  let canvasColorPickButton = null;
 
   const els = {
     imgInput: document.getElementById('imgInput'),
     audioInput: document.getElementById('audioInput'),
+    applyDefaultTemplate1Btn: document.getElementById('applyDefaultTemplate1Btn'),
+    applyDefaultTemplate2Btn: document.getElementById('applyDefaultTemplate2Btn'),
     saveVideoSettingsBtn: document.getElementById('saveVideoSettingsBtn'),
     loadVideoSettingsBtn: document.getElementById('loadVideoSettingsBtn'),
     videoSettingsInput: document.getElementById('videoSettingsInput'),
@@ -739,6 +756,70 @@ Hikari no saki e
   function setStatus(html){ statusEl.innerHTML = html; }
   function setAccentVar(){ /* UI 색 고정 */ }
 
+  function stopCanvasColorPick(message='색상 추출을 취소했어요.') {
+    canvasColorPickTarget = null;
+    if(canvasColorPickButton) canvasColorPickButton.classList.remove('is-picking');
+    canvasColorPickButton = null;
+    document.querySelector('.stage-wrap')?.classList.remove('color-picking');
+    if(message) setStatus(message);
+  }
+
+  function beginCanvasColorPick(input, button){
+    if(!input) return;
+    if(canvasColorPickTarget === input){ stopCanvasColorPick(); return; }
+    if(canvasColorPickButton) canvasColorPickButton.classList.remove('is-picking');
+    canvasColorPickTarget = input;
+    canvasColorPickButton = button || null;
+    canvasColorPickButton?.classList.add('is-picking');
+    document.querySelector('.stage-wrap')?.classList.add('color-picking');
+    document.querySelector('.stage-wrap')?.scrollIntoView({behavior:'auto', block:'center'});
+    setStatus('<b>스포이드 활성화:</b> 캔버스에서 원하는 색을 한 번 클릭하세요. ESC를 누르면 취소돼요.');
+  }
+
+  function installCanvasColorPickers(){
+    document.querySelectorAll('input[type="color"].swatch').forEach(input=>{
+      if(input.dataset.canvasPickerReady==='1') return;
+      input.dataset.canvasPickerReady='1';
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='color-picker-btn';
+      button.textContent='🎯 스포이드';
+      button.title='캔버스에서 색 추출';
+      button.setAttribute('aria-label','캔버스에서 색 추출');
+      button.addEventListener('click',()=>beginCanvasColorPick(input,button));
+      input.insertAdjacentElement('afterend',button);
+    });
+  }
+
+  function rgbToHex(r,g,b){
+    return '#' + [r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+  }
+
+  function sampleCanvasColor(p){
+    if(!canvasColorPickTarget) return false;
+    try{
+      const x=Math.max(0,Math.min(W-1,Math.floor(p.x)));
+      const y=Math.max(0,Math.min(H-1,Math.floor(p.y)));
+      const pixel=ctx.getImageData(x,y,1,1).data;
+      const hex=rgbToHex(pixel[0],pixel[1],pixel[2]);
+      const target=canvasColorPickTarget;
+      target.value=hex;
+      target.dispatchEvent(new Event('input',{bubbles:true}));
+      target.dispatchEvent(new Event('change',{bubbles:true}));
+      stopCanvasColorPick(`<b>${hex.toUpperCase()}</b> 색을 캔버스에서 가져왔어요.`);
+    }catch(err){
+      stopCanvasColorPick('이 캔버스에서는 색을 읽지 못했어요. 다른 위치를 다시 시도해주세요.');
+    }
+    return true;
+  }
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape' && canvasColorPickTarget){
+      e.preventDefault();
+      stopCanvasColorPick();
+    }
+  });
+
   function clampNumber(value, fallback, min=-Infinity, max=Infinity){
     const n = Number(value);
     return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
@@ -764,6 +845,27 @@ Hikari no saki e
     const cleaned = String(value || '스챗_MV_설정').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,' ').slice(0,60);
     return cleaned || '스챗_MV_설정';
   }
+  const DEFAULT_VIDEO_TEMPLATES = {
+    template1: {"format":"schat-mv-video-settings","version":2,"video":{"recordQuality":"1080_60","mainImage":{"x":0.2383569395169266,"y":0.5064247556594647,"widthRatio":0.26088297995479004,"mode":"disc","zoom":1,"cropX":0,"cropY":0,"spin":true,"spinSpeed":28},"decoration":{"starCount":0,"starSize":55,"orbitSpeed":45,"twinkle":60,"rounded":true,"particles":true},"glow":{"color":"#ffffff","autoColor":false,"backGlow":68,"eqRing":true,"eqRingIntensity":15,"eqRingSensitivity":13,"frequencyPulse":false,"frequencyPulseIntensity":58},"title":{"text":"","color":"#ffffff","font":"default","size":56,"spacing":0,"x":0.5,"y":0.88,"shadow":true,"guide":true},"background":{"type":"gradient","solidColor":"#0e0e14","gradientColor1":"#ffffff","gradientColor2":"#60a5c9","direction":"diagonal","dim":35,"imageDataUrl":""},"stickers":[],"subtitleStyle":{"enabled":true,"shadow":false,"fontSize":69,"x":0.6972183151962371,"y":0.5252155355533102,"color":"#ffffff","sideOpacity":0.42,"lyricMode":"double"}}},
+    template2: {"format":"schat-mv-video-settings","version":2,"video":{"recordQuality":"1080_60","mainImage":{"x":0.3093556639529234,"y":0.48775492165678536,"widthRatio":0.26088297995479004,"mode":"original","zoom":1,"cropX":0,"cropY":0,"spin":true,"spinSpeed":28},"decoration":{"starCount":3,"starSize":55,"orbitSpeed":69,"twinkle":61,"rounded":true,"particles":true},"glow":{"color":"#ffffff","autoColor":false,"backGlow":0,"eqRing":false,"eqRingIntensity":15,"eqRingSensitivity":13,"frequencyPulse":false,"frequencyPulseIntensity":58},"title":{"text":"","color":"#ffffff","font":"default","size":56,"spacing":0,"x":0.5,"y":0.88,"shadow":true,"guide":true},"background":{"type":"gradient","solidColor":"#0e0e14","gradientColor1":"#ffffff","gradientColor2":"#60a5c9","direction":"diagonal","dim":35,"imageDataUrl":""},"stickers":[],"subtitleStyle":{"enabled":true,"shadow":false,"fontSize":79,"x":0.6669781266677621,"y":0.49302948939797414,"color":"#ffffff","sideOpacity":0.42,"lyricMode":"single"}}}
+  };
+
+  async function applyBuiltInTemplate(key, label){
+    try{
+      const template = DEFAULT_VIDEO_TEMPLATES[key];
+      if(!template) throw new Error('기본 템플릿을 찾지 못했습니다.');
+      // 원본 상수를 실수로 변경하지 않도록 복제해서 적용합니다.
+      const cloned = JSON.parse(JSON.stringify(template));
+      await applyVideoSettings(cloned);
+      if(els.videoSettingsName) els.videoSettingsName.textContent = label;
+      setStatus(`✨ <b>${label}</b>을 적용했어요. 썸네일 이미지와 노래만 새로 넣으면 돼요.`);
+    }catch(error){
+      console.error(error);
+      setStatus('기본 템플릿을 적용하지 못했어요. 페이지를 새로 열고 다시 시도해 주세요.');
+      alert('기본 템플릿을 적용하지 못했습니다.');
+    }
+  }
+
   function collectVideoSettings(){
     return {
       format:'schat-mv-video-settings',
@@ -976,7 +1078,7 @@ Hikari no saki e
     els.subtitleY.value = String(Math.round(Math.max(45,Math.min(92,subtitleYRatio*100))));
     els.subtitleColor.value = subtitleColor;
     els.subtitleSideOpacity.value = String(Math.round(subtitleSideOpacity*100));
-    refreshLyricModeUi();
+    updateLyricModeUi();
 
     if(root.recordQuality && RECORD_PRESETS[root.recordQuality]){
       els.recordQuality.value = root.recordQuality;
@@ -996,12 +1098,15 @@ Hikari no saki e
       setStatus('📂 영상·자막 스타일 설정을 불러왔어요. 배경·스티커·자막 위치와 크기까지 복원됐어요. 이제 새 <b>썸네일 이미지</b>, <b>노래</b>, <b>가사 파일</b>을 넣어주세요.');
     }catch(error){
       console.error(error);
-      setStatus('설정 파일을 불러오지 못했어요. 이 메이커에서 저장한 <b>.schatmv.json</b> 파일인지 확인해 주세요.');
-      alert('영상 설정 파일을 읽지 못했습니다.\n이 메이커에서 저장한 설정 파일인지 확인해 주세요.');
+      const reason = error?.message ? String(error.message) : '알 수 없는 오류';
+      setStatus(`설정 파일을 불러오지 못했어요. <b>${reason}</b>`);
+      alert(`영상 설정 파일을 읽지 못했습니다.\n${reason}`);
     }finally{
       if(els.videoSettingsInput) els.videoSettingsInput.value='';
     }
   }
+  els.applyDefaultTemplate1Btn?.addEventListener('click', ()=>applyBuiltInTemplate('template1','두줄가사 기본 템플릿'));
+  els.applyDefaultTemplate2Btn?.addEventListener('click', ()=>applyBuiltInTemplate('template2','한줄가사 기본 템플릿'));
   els.saveVideoSettingsBtn?.addEventListener('click', saveVideoSettingsFile);
   els.loadVideoSettingsBtn?.addEventListener('click', ()=>els.videoSettingsInput?.click());
   els.videoSettingsInput?.addEventListener('change', e=>{
@@ -1657,6 +1762,12 @@ Hikari no saki e
 
   canvas.addEventListener('pointerdown', e=>{
     const p=canvasPoint(e);
+    if(canvasColorPickTarget){
+      sampleCanvasColor(p);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const overlayHit = findOverlayHit(p);
     if(overlayHit){
       selectedOverlayId = overlayHit.item.id; mainImageSelected = false;
@@ -2549,6 +2660,7 @@ Hikari no saki e
   canvas.addEventListener('contextlost', e=>{ e.preventDefault(); }, false);
   canvas.addEventListener('contextrestored', ()=>{ if(!running) drawStatic(); }, false);
 
+  installCanvasColorPickers();
   setAccentVar(); refreshBgUI(); updateOverlayList(); updateStickerControlState(); updateLyricModeUi();
   updateCueTable(); updateLyricUi(-1); setMode('video'); updateSeekUi();
   applyCanvasResolution(getRecordPreset()); drawStatic();
