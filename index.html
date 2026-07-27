@@ -499,8 +499,9 @@
       <div class="field">
         <label class="lbl">가사 형식</label>
         <div class="toggle-row" style="margin-top:0" role="radiogroup" aria-label="가사 형식 선택">
-          <button type="button" class="chip on" id="lyricModeSingleChip" data-lyric-mode="single" role="radio" aria-checked="true">한줄가사 (기본)</button>
-          <button type="button" class="chip" id="lyricModeDoubleChip" data-lyric-mode="double" role="radio" aria-checked="false">두줄가사 (원어가사+번역가사)</button>
+          <button type="button" class="chip on" id="lyricModeSingleChip" data-lyric-mode="single" role="radio" aria-checked="true">한줄가사 (원어)</button>
+          <button type="button" class="chip" id="lyricModeDoubleChip" data-lyric-mode="double" role="radio" aria-checked="false">두줄가사 (원어+번역)</button>
+          <button type="button" class="chip" id="lyricModeTripleChip" data-lyric-mode="triple" role="radio" aria-checked="false">세줄가사 (원어+표음+번역)</button>
         </div>
       </div>
       <div style="height:12px"></div>
@@ -520,7 +521,7 @@ Hikari no saki e
     </div>
 
     <div class="card">
-      <h3>실시간 3줄 자막</h3>
+      <h3>실시간 자막 미리보기</h3>
       <div class="lyric-context">
         <div class="lyric-line-box"><span class="tag">이전 가사</span><span class="text" id="lyricPrev">—</span></div>
         <div class="lyric-line-box current"><span class="tag">지금 가사</span><span class="text" id="lyricCurrent">아직 적용된 가사 없음</span></div>
@@ -655,7 +656,7 @@ Hikari no saki e
   let activeDrag = null;
   let activeMode = 'video';
   let lyricMode = 'single';
-  let lyricLines = [];   // [{a, b}]
+  let lyricLines = [];   // [{a, b, c}] · 원어 / (표음 또는 번역) / 번역
   let cueLogs = [];
   let cueCursor = -1;
   let subtitlesEnabled = true;
@@ -733,6 +734,7 @@ Hikari no saki e
     lyricFileName: document.getElementById('lyricFileName'),
     lyricModeSingleChip: document.getElementById('lyricModeSingleChip'),
     lyricModeDoubleChip: document.getElementById('lyricModeDoubleChip'),
+    lyricModeTripleChip: document.getElementById('lyricModeTripleChip'),
     lyricFormatHint: document.getElementById('lyricFormatHint'),
     lyricFileHelper: document.getElementById('lyricFileHelper'),
     lyricsInput: document.getElementById('lyricsInput'),
@@ -1068,7 +1070,7 @@ Hikari no saki e
     subtitleYRatio = clampNumber(sub.y,0.78,0.30,0.97);
     subtitleColor = normalizeHex(sub.color,'#ffffff');
     subtitleSideOpacity = clampNumber(sub.sideOpacity,0.42,0.10,0.90);
-    lyricMode = sub.lyricMode==='double' ? 'double' : 'single';
+    lyricMode = ['single','double','triple'].includes(sub.lyricMode) ? sub.lyricMode : 'single';
 
     els.subtitlesEnabledChip.classList.toggle('on',subtitlesEnabled);
     els.subtitlesEnabledChip.textContent = subtitlesEnabled ? '자막 표시' : '자막 숨김';
@@ -1171,21 +1173,26 @@ Hikari no saki e
       if(!subtitleRows.length){ invalidBlocks++; return; }
 
       const index = lines.length;
-      lines.push({a:subtitleRows[0] || '', b:subtitleRows.slice(1).join(' ').trim()});
+      lines.push({
+        a:subtitleRows[0] || '',
+        b:subtitleRows[1] || '',
+        c:subtitleRows.slice(2).join(' ').trim()
+      });
       cues.push({index, time:start, endTime:end});
     });
 
+    const maxRows = lines.reduce((max,line)=>Math.max(max, line.c ? 3 : (line.b ? 2 : 1)), 1);
     return {
       lines,
       cues,
       sourceType:'srt',
       invalidBlocks,
-      detectedMode:lines.some(line=>line.b) ? 'double' : 'single'
+      detectedMode:maxRows>=3 ? 'triple' : (maxRows===2 ? 'double' : 'single')
     };
   }
 
   // 가사 파싱: SRT/LRC는 내장 타이밍을 적용하고,
-  // TXT는 선택한 한줄·두줄 형식에 따라 읽어요.
+  // TXT는 선택한 한줄·두줄·세줄 형식에 따라 읽어요.
   function parseLyricText(raw){
     const text = String(raw || '').replace(/^\uFEFF/,'').replace(/\r/g,'');
     const looksLikeSrt = /(?:^|\n)\s*(?:\d+\s*\n\s*)?\d{1,3}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,3}:\d{2}:\d{2}[,.]\d{1,3}/m.test(text);
@@ -1206,23 +1213,20 @@ Hikari no saki e
       });
       entries.sort((a,b)=>a.time-b.time);
       const lines = [], cues = [];
-      if(lyricMode==='single'){
-        entries.forEach(cur=>{
+      const fieldCount = lyricMode==='triple' ? 3 : (lyricMode==='double' ? 2 : 1);
+      entries.forEach(cur=>{
+        const last = lines[lines.length-1];
+        const lastCue = cues[cues.length-1];
+        const sameTime = !!(last && lastCue && Math.abs(cur.time-lastCue.time)<0.03);
+        if(fieldCount>1 && sameTime && !last.b){
+          last.b = cur.text;
+        }else if(fieldCount>2 && sameTime && !last.c){
+          last.c = cur.text;
+        }else{
           cues.push({index:lines.length, time:cur.time});
-          lines.push({a:cur.text, b:''});
-        });
-      }else{
-        for(let i=0;i<entries.length;i++){
-          const cur = entries[i];
-          const last = lines[lines.length-1];
-          if(last && !last.b && cues.length && Math.abs(cur.time - cues[cues.length-1].time) < 0.03){
-            last.b = cur.text;
-          }else{
-            cues.push({index:lines.length, time:cur.time});
-            lines.push({a:cur.text, b:''});
-          }
+          lines.push({a:cur.text, b:'', c:''});
         }
-      }
+      });
       return {lines, cues, sourceType:'lrc'};
     }
 
@@ -1231,65 +1235,86 @@ Hikari no saki e
     if(lyricMode==='single'){
       rawLines.forEach(line=>{
         const value=line.trim();
-        if(value) lines.push({a:value, b:''});
+        if(value) lines.push({a:value, b:'', c:''});
       });
       return {lines, cues:[], sourceType:'txt'};
     }
 
-    const blocks = text.split(/\n\s*\n/).map(block=>block.split('\n').map(line=>line.trim()).filter(Boolean)).filter(block=>block.length);
+    const fieldCount = lyricMode==='triple' ? 3 : 2;
+    const blocks = text.split(/\n\s*\n/)
+      .map(block=>block.split('\n').map(line=>line.trim()).filter(Boolean))
+      .filter(block=>block.length);
     if(blocks.length>1){
       blocks.forEach(block=>{
         const a=block[0]||'';
-        const b=block.slice(1).join(' ').trim();
-        if(a || b) lines.push({a,b});
+        const b=fieldCount===3 ? (block[1]||'') : block.slice(1).join(' ').trim();
+        const c=fieldCount===3 ? block.slice(2).join(' ').trim() : '';
+        if(a || b || c) lines.push({a,b,c});
       });
     }else{
       const compact = rawLines.map(line=>line.trim()).filter(Boolean);
-      for(let i=0;i<compact.length;i+=2){
-        lines.push({a:compact[i]||'', b:compact[i+1]||''});
+      for(let i=0;i<compact.length;i+=fieldCount){
+        lines.push({
+          a:compact[i]||'',
+          b:compact[i+1]||'',
+          c:fieldCount===3 ? (compact[i+2]||'') : ''
+        });
       }
     }
     return {lines, cues:[], sourceType:'txt'};
   }
 
+  function lyricModeLabel(mode=lyricMode){
+    if(mode==='triple') return '세줄가사';
+    if(mode==='double') return '두줄가사';
+    return '한줄가사';
+  }
+
   function updateLyricModeUi(){
     const isDouble = lyricMode==='double';
-    [els.lyricModeSingleChip, els.lyricModeDoubleChip].forEach(btn=>{
+    const isTriple = lyricMode==='triple';
+    [els.lyricModeSingleChip, els.lyricModeDoubleChip, els.lyricModeTripleChip].forEach(btn=>{
       if(!btn) return;
       const on = btn.dataset.lyricMode===lyricMode;
       btn.classList.toggle('on',on);
       btn.setAttribute('aria-checked',String(on));
     });
     if(els.lyricFormatHint){
-      els.lyricFormatHint.textContent = isDouble
-        ? '원어 한 줄과 번역 한 줄을 한 가사로 묶어요. 가사 묶음 사이는 빈 줄로 구분해요.'
-        : '한 줄마다 하나의 가사로 적용해요. 빈 줄은 자동으로 건너뛰어요.';
+      els.lyricFormatHint.textContent = isTriple
+        ? '원어·표음·번역을 세 줄로 묶어요. 가사 묶음 사이는 빈 줄로 구분해요.'
+        : (isDouble
+          ? '원어와 번역을 두 줄로 묶어요. 가사 묶음 사이는 빈 줄로 구분해요.'
+          : '한 줄마다 하나의 원어 가사로 적용해요. 빈 줄은 자동으로 건너뛰어요.');
     }
     if(els.lyricFileHelper){
-      els.lyricFileHelper.textContent = isDouble
-        ? 'SRT는 시작·종료 시간과 원어/번역을 그대로 적용하고, LRC는 같은 시간의 두 줄을 합쳐요. TXT는 두 줄씩 묶어요.'
-        : 'SRT·LRC는 파일의 시간값을 자동 적용하고, TXT는 각 줄의 시간을 직접 찍어요.';
+      els.lyricFileHelper.textContent = isTriple
+        ? 'SRT는 원어/표음/번역 세 줄과 시간값을 적용하고, LRC는 같은 시간의 세 줄을 합쳐요. TXT는 세 줄씩 묶어요.'
+        : (isDouble
+          ? 'SRT는 원어/번역 두 줄과 시간값을 적용하고, LRC는 같은 시간의 두 줄을 합쳐요. TXT는 두 줄씩 묶어요.'
+          : 'SRT·LRC는 파일의 시간값을 자동 적용하고, TXT는 각 원어 줄의 시간을 직접 찍어요.');
     }
     if(els.lyricsInput){
-      els.lyricsInput.placeholder = isDouble
-        ? `Kimi no koe ga kikoeru\n너의 목소리가 들려\n\nYoru wo koete\n밤을 넘어서\n\n(원어+번역을 두 줄씩 입력해요)`
-        : `Kimi no koe ga kikoeru\nYoru wo koete\nHikari no saki e\n\n(한 줄마다 다음 가사로 적용돼요)`;
+      els.lyricsInput.placeholder = isTriple
+        ? `君の声が聞こえる\nKimi no koe ga kikoeru\n너의 목소리가 들려\n\n夜を越えて\nYoru wo koete\n밤을 넘어서\n\n(원어+표음+번역을 세 줄씩 입력해요)`
+        : (isDouble
+          ? `君の声が聞こえる\n너의 목소리가 들려\n\n夜を越えて\n밤을 넘어서\n\n(원어+번역을 두 줄씩 입력해요)`
+          : `君の声が聞こえる\n夜を越えて\n光の先へ\n\n(한 줄마다 다음 원어 가사로 적용돼요)`);
     }
   }
 
   function setLyricMode(mode){
-    const nextMode = mode==='double' ? 'double' : 'single';
+    const nextMode = ['single','double','triple'].includes(mode) ? mode : 'single';
     if(nextMode===lyricMode) return;
     if(cueLogs.length && !window.confirm('가사 형식을 바꾸면 현재 자막 타이밍 로그가 초기화됩니다. 변경하시겠습니까?')) return;
     lyricMode = nextMode;
     updateLyricModeUi();
     if(els.lyricsInput.value.trim()){
       applyLyricsFromInput();
-      setStatus(`<b>${lyricMode==='double'?'두줄가사':'한줄가사'}</b> 형식으로 다시 반영했어요. 타이밍 로그도 새 형식 기준으로 다시 정리됐어요.`);
+      setStatus(`<b>${lyricModeLabel()}</b> 형식으로 다시 반영했어요. 타이밍 로그도 새 형식 기준으로 다시 정리됐어요.`);
     }else{
       lyricLines=[]; cueLogs=[]; cueCursor=-1;
       updateCueTable(); updateLyricUi(-1);
-      setStatus(`<b>${lyricMode==='double'?'두줄가사':'한줄가사'}</b> 형식을 선택했어요.`);
+      setStatus(`<b>${lyricModeLabel()}</b> 형식을 선택했어요.`);
       if(!running) drawStatic();
     }
   }
@@ -1315,7 +1340,7 @@ Hikari no saki e
       }else if(parsed.sourceType==='lrc'){
         setStatus(`LRC 시간값 <b>${cueLogs.length}개</b>를 불러왔어요. 숫자는 자막 로그에서 직접 수정할 수 있어요.`);
       }else{
-        setStatus(`가사 <b>${lyricLines.length}줄</b>을 반영했어요. 노래를 재생하며 다음 줄 버튼을 눌러 타이밍을 찍어주세요.`);
+        setStatus(`가사 <b>${lyricLines.length}개</b>를 반영했어요. 노래를 재생하며 다음 줄 버튼을 눌러 타이밍을 찍어주세요.`);
       }
     }else{
       setStatus(parsed.sourceType==='srt' ? '올바른 SRT 자막 항목을 찾지 못했어요. 번호, 시간 줄, 자막 본문을 확인해 주세요.' : '가사를 한 줄 이상 입력해 주세요.');
@@ -1355,12 +1380,13 @@ Hikari no saki e
     if(cueLogs.length) return getActiveLyricIndex(audio.currentTime || 0);
     return -1;
   }
-  function cueText(cue){ return cue ? (cue.a || '') + (cue.b ? ' / ' + cue.b : '') : ''; }
+  function cueText(cue){ return cue ? [cue.a,cue.b,cue.c].filter(value=>String(value||'').trim()).join(' / ') : ''; }
   function cueHtml(cue){
     if(!cue) return '—';
     const a = escapeHtml(cue.a || '');
     const b = cue.b ? `<span class="trans">${escapeHtml(cue.b)}</span>` : '';
-    return (a || '—') + b;
+    const c = cue.c ? `<span class="trans">${escapeHtml(cue.c)}</span>` : '';
+    return (a || '—') + b + c;
   }
   function updateLyricUi(index=resolveLyricPreviewIndex()){
     const prev = index > 0 ? lyricLines[index-1] : null;
@@ -1428,7 +1454,7 @@ Hikari no saki e
       else end = start + 3;
 
       const lyric = lyricLines[cue.index] || {};
-      const lines = [lyric.a, lyric.b].filter(line=>String(line || '').trim()).map(line=>String(line).trim());
+      const lines = [lyric.a, lyric.b, lyric.c].filter(line=>String(line || '').trim()).map(line=>String(line).trim());
       return `${position+1}\r\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\r\n${lines.join('\r\n')}\r\n`;
     });
 
@@ -2180,7 +2206,7 @@ Hikari no saki e
     }
   }
 
-  // ---------- 자막 (한줄/두줄 선택, 드래그 이동) ----------
+  // ---------- 자막 (한줄/두줄/세줄 선택, 드래그 이동) ----------
   function rgbaFromHex(hex,alpha){
     const value=String(hex||'#ffffff').replace('#','');
     const full=value.length===3 ? value.split('').map(ch=>ch+ch).join('') : value.padEnd(6,'f').slice(0,6);
@@ -2215,10 +2241,12 @@ Hikari no saki e
     if(index<0 || !lyricLines[index]) return;
 
     const scale=H/1080;
-    const aPx=Math.max(16,subtitleFontSize*scale);   // 현재 원문
-    const bPx=aPx*0.66;                               // 현재 번역
-    const sideAPx=aPx*0.60;                           // 이전/다음 원문
-    const sideBPx=sideAPx*0.74;                       // 이전/다음 번역
+    const aPx=Math.max(16,subtitleFontSize*scale);     // 원어
+    const bPx=aPx*(lyricMode==='triple'?0.72:0.66);   // 표음 또는 번역
+    const cPx=aPx*0.62;                               // 세줄 모드 번역
+    const sideAPx=aPx*0.60;                           // 이전/다음 원어
+    const sideBPx=sideAPx*0.76;                       // 이전/다음 표음 또는 번역
+    const sideCPx=sideAPx*0.70;                       // 이전/다음 번역
     const cxp=subtitleX*W;
     const lineGap=aPx*0.10;
     const blockGap=aPx*0.5;
@@ -2229,6 +2257,7 @@ Hikari no saki e
       const aAlpha = cur?1:subtitleSideOpacity;
       rows.push({text:cue.a||'', px:cur?aPx:sideAPx, weight:cur?850:700, alpha:aAlpha});
       if(cue.b) rows.push({text:cue.b, px:cur?bPx:sideBPx, weight:cur?750:650, alpha:cur?Math.min(1,subtitleSideOpacity+0.55):subtitleSideOpacity*0.9});
+      if(cue.c) rows.push({text:cue.c, px:cur?cPx:sideCPx, weight:cur?720:620, alpha:cur?Math.min(1,subtitleSideOpacity+0.48):subtitleSideOpacity*0.84});
       return rows;
     }
     const prevRows=rowsFor(lyricLines[index-1],false);
